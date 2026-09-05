@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    body {
+        @apply bg-slate-100 font-sans text-slate-900 antialiased;
+    }
+
+    ::selection {
+        @apply bg-navy-200 text-navy-950;
+    }
+}
+
+@layer components {
+    /* Reusable surfaces */
+    .card {
+        @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+    }
+
+    .card-pad {
+        @apply p-5 sm:p-6;
+    }
+
+    .surface-title {
+        @apply text-base font-bold tracking-tight text-slate-900 sm:text-lg;
+    }
+
+    .page-eyebrow {
+        @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-navy-500;
+    }
+
+    /* Buttons */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    .btn-primary {
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-navy-800 px-4 py-2 text-sm font-semibold text-white transition duration-150 ease-in-out hover:bg-navy-700 active:bg-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    .btn-outline {
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition duration-150 ease-in-out hover:border-navy-300 hover:bg-navy-50 hover:text-navy-800 active:bg-navy-100 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    .btn-danger {
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-red-600 px-4 py-2 text-sm font-semibold text-white transition duration-150 ease-in-out hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    .btn-small {
+        @apply px-3 py-1.5 text-xs;
+    }
+
+    /* Forms */
+    .input {
+        @apply w-full rounded-lg border-slate-300 bg-white text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-navy-500 focus:ring-navy-500;
+    }
+
+    .input-label {
+        @apply text-sm font-medium text-slate-700;
+    }
+
+    /* Tables */
+    .table-wrap {
+        @apply overflow-x-auto;
+    }
+
+    .table {
+        @apply min-w-full divide-y divide-slate-200;
+    }
+
+    .th {
+        @apply px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:px-6;
+    }
+
+    .td {
+        @apply px-4 py-3.5 text-sm sm:px-6;
+    }
+
+    .thead {
+        @apply bg-slate-50/80;
+    }
+
+    .tbody {
+        @apply divide-y divide-slate-100 bg-white;
+    }
+
+    /* Status badges */
+    .badge {
+        @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    }
+
+    .badge-dot {
+        @apply inline-block h-1.5 w-1.5 rounded-full;
+    }
+}
