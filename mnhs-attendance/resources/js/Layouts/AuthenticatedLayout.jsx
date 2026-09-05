@@ -116,7 +116,14 @@ function SidebarContent({ navItems, role, user }) {
     const grouped = NAV_GROUPS.filter((group) => group.roles.includes(role));
 
     return (
-        <div className="flex h-full flex-col bg-navy-950">
+        <div className="relative flex h-full flex-col overflow-hidden bg-navy-950">
+            {/* Background */}
+            <img
+                src="/images/background.jpg"
+                alt=""
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-10 blur-md"
+            />
+
             {/* Brand */}
             <div className="flex h-16 items-center gap-3 px-5">
                 <Link href="/" className="inline-flex shrink-0 items-center gap-3">
@@ -176,7 +183,7 @@ function SidebarContent({ navItems, role, user }) {
             </nav>
 
             {/* User section */}
-            <div className="border-t border-white/10 px-3 py-4">
+            <div className="mt-auto border-t border-white/10 px-3 py-4">
                 <Dropdown>
                     <Dropdown.Trigger>
                         <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-white/5">
@@ -210,7 +217,7 @@ function SidebarContent({ navItems, role, user }) {
                             </svg>
                         </button>
                     </Dropdown.Trigger>
-                    <Dropdown.Content>
+                    <Dropdown.Content placement="top">
                         <div className="border-b border-slate-100 px-4 py-3">
                             <p className="truncate text-sm font-semibold text-slate-900">
                                 {user?.name}

@@ -9,13 +9,36 @@ export default function GuestLayout({ children }) {
                 <img
                     src="/images/background.jpg"
                     alt=""
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover blur-sm"
                 />
                 <div className="absolute inset-0 bg-navy-950/70" />
             </div>
 
             {/* Content */}
             <div className="relative z-10 w-full max-w-sm">
+                {/* Back to Home */}
+                <div className="mb-4">
+                    <Link
+                        href="/"
+                        className="inline-flex items-center gap-1.5 text-sm font-medium text-navy-200/80 transition hover:text-white"
+                    >
+                        <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="2"
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                            />
+                        </svg>
+                        Back to Home
+                    </Link>
+                </div>
+
                 <div className="mb-8 flex flex-col items-center gap-3">
                     <Link href="/">
                         <ApplicationLogo className="h-16 w-16 text-white drop-shadow-lg" />

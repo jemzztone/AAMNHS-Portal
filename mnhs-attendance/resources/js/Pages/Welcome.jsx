@@ -29,7 +29,7 @@ const features = [
     {
         title: 'Guardian Notifications',
         description:
-            'Guardians are notified by email in real time on every scan, keeping parents informed of their child’s attendance.',
+            'Guardians are notified by email in real time on every scan, keeping parents informed of their child\'s attendance.',
         icon: (
             <path
                 strokeLinecap="round"
@@ -56,12 +56,12 @@ export default function Welcome({ auth }) {
     return (
         <>
             <Head title="Welcome" />
-            <div className="flex min-h-screen flex-col bg-white">
+            <div className="flex min-h-screen flex-col">
                 {/* Top accent bar */}
                 <div className="h-1 bg-gradient-to-r from-navy-950 via-navy-600 to-navy-300" />
 
                 {/* ===== Top nav ===== */}
-                <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/85 backdrop-blur">
+                <header className="sticky top-0 z-40 border-b border-white/20 bg-white/80 backdrop-blur">
                     <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center gap-3">
                             <ApplicationLogo className="h-9 w-9 text-navy-800" />
@@ -103,7 +103,16 @@ export default function Welcome({ auth }) {
                 </header>
 
                 {/* ===== Hero ===== */}
-                <section className="relative overflow-hidden bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 text-white">
+                <section className="relative overflow-hidden bg-navy-950 text-white">
+                    {/* Background image with blur */}
+                    <div className="absolute inset-0">
+                        <img
+                            src="/images/background.jpg"
+                            alt=""
+                            className="h-full w-full object-cover opacity-30 blur-sm"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-br from-navy-950/80 via-navy-900/70 to-navy-800/80" />
+                    </div>
                     <div className="pointer-events-none absolute -left-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-navy-500/20 blur-3xl" />
                     <div className="pointer-events-none absolute -bottom-40 -right-24 h-[30rem] w-[30rem] rounded-full bg-navy-300/10 blur-3xl" />
                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.06)_1px,transparent_0)] [background-size:26px_26px]" />
