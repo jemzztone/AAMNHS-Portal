@@ -1,0 +1,191 @@
+flowchart TD
+    subgraph ACTORS["🎭 ACTORS / USER ROLES"]
+        SA["👑 Super Admin<br/>Full system access<br/>User mgmt, audit logs, AI"]
+        ADM["🔧 Admin<br/>Students, sections,<br/>attendance, AI"]
+        TCH["📚 Teacher<br/>Assigned sections only<br/>Manual attendance, AI"]
+        GUARD["🛡️ Security Guard<br/>QR code scanning<br/>Gate attendance"]
+        STU["🎓 Student<br/>Own dashboard<br/>QR code, admission slips"]
+    end
+
+    subgraph AUTH["🔐 AUTHENTICATION FLOW"]
+        Login["Login Page<br/>Email + Password"]
+        Register["Registration<br/>or Google OAuth"]
+        Session["Session Created<br/>Cookie set"]
+        Middleware["Middleware Chain:<br/>auth → verified →<br/>active → force-pw-change"]
+        RoleCheck["Role-Based Route<br/>Access Control"]
+    end
+
+    subgraph STUDENT["📦 STUDENT MANAGEMENT"]
+        SCreate["Create Student<br/>Form → StoreStudentRequest"]
+        SImport["CSV/XLSX Import<br/>Upload → ImportStudentsFromCsv"]
+        SIndex["Student List<br/>Search, filter, paginate"]
+        SShow["Student Detail<br/>+ QR Code display"]
+        SPrintQR["QR Printing<br/>Single / Bulk"]
+        SUpdate["Edit Student<br/>UpdateStudent action"]
+        SDelete["Soft Delete<br/>Student removed"]
+    end
+
+    subgraph ATTEND_QR["📱 ATTENDANCE: QR SCAN<br/>Security Guard"]
+        ScanPage["Guard Scan Page<br/>Schedule + Recent scans"]
+        ScanInput["Enter QR Token<br/>or LRN"]
+        FindStudent["Find Student<br/>by qr_token or lrn"]
+        CheckActive["Check is_active<br/>← Inactive? 403"]
+        CheckExisting["Check Today's<br/>Existing Record"]
+        CheckSlip["Admission Slip<br/>Required Check<br/>Absent yesterday?"]
+        ClassifyStatus["Classify Status<br/>present / late<br/>based on schedule"]
+        CreateRecord["Create AttendanceRecord<br/>source: scan"]
+        AuditLog["Audit Log<br/>attendance.scan"]
+        NotifyGuardian["Notify Guardian<br/>Email sent"]
+        TimeOut["Time Out Mode<br/>Update existing<br/>record time_out"]
+    end
+
+    subgraph ATTEND_MANUAL["✍️ ATTENDANCE: MANUAL ENTRY<br/>Teacher / Admin"]
+        ManualForm["Manual Entry Form<br/>student_id, date, status"]
+        TSectionCheck["Teacher Section Check<br/>Assigned section only?<br/>← No? 403"]
+        ManualRecord["Create/Update<br/>AttendanceRecord<br/>source: manual"]
+        ManualAudit["Audit Log<br/>attendance.manual_entry"]
+    end
+
+    subgraph ADMISSION["📝 ADMISSION SLIPS"]
+        SlipCreate["Student Creates Slip<br/>absence_date, reason<br/>Rate limit: 3/5min"]
+        SlipReview["Admin Review<br/>Approve or Reject<br/>with notes"]
+        SlipStored["AdmissionSlip Record<br/>status: pending/approved/rejected"]
+    end
+
+    subgraph NOTIFY["📧 GUARDIAN NOTIFICATIONS"]
+        NotifyCheck["Guardian email exists?<br/>← No? Skip"]
+        NotifyCreate["Create GuardianNotification<br/>status: pending"]
+        NotifySend["Send Email<br/>GuardianAttendanceNotification"]
+        NotifyStatus["Update status:<br/>sent / failed"]
+    end
+
+    subgraph AI["🤖 AI ASSISTANT<br/>Super Admin / Admin / Teacher"]
+        AIQuestion["User Question<br/>max 2000 chars"]
+        AIContext["BuildAiContext<br/>Role-filtered data"]
+        AIPrompt["Build Prompt<br/>System rules + Data + Question"]
+        AICall["Call AI Provider<br/>Gemini or OpenRouter<br/>throttle: 20/min"]
+        AIResponse["Get Response<br/>Extract answer text"]
+        AILog["Audit Log<br/>ai.query"]
+    end
+
+    subgraph DASHBOARD["📊 DASHBOARD & ANALYTICS"]
+        DashRole["Role-Based Dashboard<br/>Stats + Recent activity<br/>Auto-refresh 5s"]
+        Analytics["Analytics Report<br/>Date range, section filter<br/>Stats, rankings, top students"]
+    end
+
+    subgraph ADMIN["🔧 ADMINISTRATIVE FUNCTIONS<br/>Super Admin / Admin"]
+        UserCRUD["User CRUD<br/>Create, view, toggle-active,<br/>reset password, restore"]
+        TeacherAssign["Teacher Assignment<br/>Assign/remove teachers<br/>to sections"]
+        SectionCRUD["Section CRUD<br/>with schedules<br/>day/time/grace_minutes"]
+        GradeMgmt["Grade Level &<br/>Academic Year Mgmt"]
+        AuditView["Audit Logs<br/>Read-only view"]
+    end
+
+    subgraph DB["🗄️ DATABASE (MySQL)"]
+        MUser["Users<br/>id, name, email, password,<br/>role, is_active"]
+        MStudent["Students<br/>user_id, lrn, names,<br/>section_id, qr_token,<br/>guardian_email, is_active"]
+        MSection["Sections<br/>name, grade_level_id,<br/>academic_year_id"]
+        MAttendance["AttendanceRecords<br/>student_id, section_id,<br/>date, status, time_in,<br/>time_out, source"]
+        MAdmission["AdmissionSlips<br/>student_id, absence_date,<br/>reason, status, notes"]
+        MNotify["GuardianNotifications<br/>student_id, guardian_email,<br/>subject, body, status"]
+        MAudit["AuditLogs<br/>event, actor_id,<br/>old_values, new_values,<br/>ip_address, user_agent"]
+        MSchedule["SectionSchedules /<br/>GuardSchedules<br/>day_of_week, times"]
+        MAssign["TeacherSectionAssignments<br/>user_id, section_id,<br/>academic_year_id"]
+    end
+
+    ACTORS --> AUTH
+    AUTH --> Middleware
+    Middleware --> RoleCheck
+    
+    RoleCheck -->|Super Admin / Admin| STUDENT
+    RoleCheck -->|Super Admin / Admin / Teacher| ATTEND_MANUAL
+    RoleCheck -->|Security Guard| ATTEND_QR
+    RoleCheck -->|Super Admin / Admin| ADMISSION
+    RoleCheck -->|Super Admin / Admin| ADMIN
+    RoleCheck -->|All authenticated| DASHBOARD
+    RoleCheck -->|Super Admin / Admin / Teacher| AI
+    
+    STUDENT --> SCreate
+    STUDENT --> SImport
+    STUDENT --> SIndex
+    STUDENT --> SShow
+    STUDENT --> SPrintQR
+    STUDENT --> SUpdate
+    STUDENT --> SDelete
+    
+    ATTEND_QR --> ScanPage
+    ScanPage --> ScanInput
+    ScanInput --> FindStudent
+    FindStudent --> CheckActive
+    CheckActive -->|Active| CheckExisting
+    CheckExisting -->|No existing| CheckSlip
+    CheckSlip -->|Approved slip or not absent| ClassifyStatus
+    CheckExisting -->|Has existing| TimeOut
+    ClassifyStatus --> CreateRecord
+    CreateRecord --> AuditLog
+    CreateRecord --> NotifyGuardian
+    TimeOut --> AuditLog
+    TimeOut --> NotifyGuardian
+    
+    ATTEND_MANUAL --> ManualForm
+    ManualForm --> TSectionCheck
+    TSectionCheck -->|Teacher + assigned| ManualRecord
+    TSectionCheck -->|Admin/Super Admin| ManualRecord
+    ManualRecord --> ManualAudit
+    
+    ADMISSION --> SlipCreate
+    SlipCreate --> SlipStored
+    SlipStored --> SlipReview
+    
+    NOTIFY --> NotifyCheck
+    NotifyCheck -->|Has email| NotifyCreate
+    NotifyCreate --> NotifySend
+    NotifySend --> NotifyStatus
+    
+    AI --> AIQuestion
+    AIQuestion --> AIContext
+    AIContext --> AIPrompt
+    AIPrompt --> AICall
+    AICall --> AIResponse
+    AIResponse --> AILog
+    
+    DASHBOARD --> DashRole
+    DASHBOARD --> Analytics
+    
+    ADMIN --> UserCRUD
+    ADMIN --> TeacherAssign
+    ADMIN --> SectionCRUD
+    ADMIN --> GradeMgmt
+    ADMIN --> AuditView
+    
+    STUDENT -.-> DB
+    ATTEND_QR -.-> DB
+    ATTEND_MANUAL -.-> DB
+    ADMISSION -.-> DB
+    NOTIFY -.-> DB
+    AI -.-> DB
+    DASHBOARD -.-> DB
+    ADMIN -.-> DB
+    
+    SCreate -.-> MStudent
+    SImport -.-> MStudent
+    CreateRecord -.-> MAttendance
+    TimeOut -.-> MAttendance
+    ManualRecord -.-> MAttendance
+    SlipCreate -.-> MAdmission
+    SlipReview -.-> MAdmission
+    NotifyCreate -.-> MNotify
+    NotifySend -.-> MNotify
+    UserCRUD -.-> MUser
+    TeacherAssign -.-> MAssign
+    SectionCRUD -.-> MSection
+    DashRole -.-> MStudent
+    DashRole -.-> MAttendance
+    Analytics -.-> MAttendance
+    Analytics -.-> MStudent
+    AIContext -.-> MStudent
+    AIContext -.-> MSection
+    AIContext -.-> MAttendance
+    AILog -.-> MAudit
+    AuditLog -.-> MAudit
+    ManualAudit -.-> MAudit

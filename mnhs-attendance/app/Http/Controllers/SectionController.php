@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Section\AssignTeacherToSection;
 use App\Actions\Section\CreateSection;
 use App\Actions\Section\UpdateSection;
 use App\Http\Requests\AssignTeacherRequest;
@@ -11,6 +10,8 @@ use App\Models\GradeLevel;
 use App\Models\Section;
 use App\Models\TeacherSectionAssignment;
 use App\Models\User;
+use App\Notifications\TeacherAssignedNotification;
+use App\Notifications\TeacherRemovedNotification;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -20,9 +21,16 @@ class SectionController extends Controller
     {
         $this->authorize('viewAny', Section::class);
 
-        $sections = Section::with(['gradeLevel', 'teachers'])
-            ->when($request->search, fn ($q, $search) => $q->where('name', 'like', "%{$search}%"))
-            ->paginate($request->get('per_page', 25));
+        $query = Section::with(['gradeLevel', 'teachers'])
+            ->withCount('students')
+            ->when($request->search, fn ($q, $search) => $q->where('name', 'like', "%{$search}%"));
+
+        if ($request->user()->role === 'teacher') {
+            $assignedIds = $request->user()->assignedSections()->pluck('sections.id');
+            $query->whereIn('sections.id', $assignedIds);
+        }
+
+        $sections = $query->paginate($request->get('per_page', 5));
 
         return Inertia::render('Sections/Index', [
             'sections' => $sections,
@@ -36,7 +44,6 @@ class SectionController extends Controller
 
         return Inertia::render('Sections/Create', [
             'gradeLevels' => GradeLevel::all(),
-            'teachers' => User::where('role', 'teacher')->get(),
         ]);
     }
 
@@ -55,7 +62,6 @@ class SectionController extends Controller
 
         return Inertia::render('Sections/Show', [
             'section' => $section,
-            'teachers' => User::where('role', 'teacher')->orderBy('name')->get(),
         ]);
     }
 
@@ -66,12 +72,13 @@ class SectionController extends Controller
         return Inertia::render('Sections/Edit', [
             'section' => $section,
             'gradeLevels' => GradeLevel::all(),
-            'teachers' => User::where('role', 'teacher')->get(),
         ]);
     }
 
     public function update(SaveSectionRequest $request, Section $section)
     {
+        $this->authorize('update', $section);
+
         (new UpdateSection)->handle($section, $request->validated());
 
         return redirect()->route('sections.show', $section)->with('success', 'Section updated successfully.');
@@ -88,17 +95,48 @@ class SectionController extends Controller
 
     public function assignTeacher(AssignTeacherRequest $request, Section $section)
     {
-        (new AssignTeacherToSection)->handle($section, (int) $request->validated('teacher_id'));
+        $this->authorize('assignTeacher', $section);
 
-        return back()->with('success', 'Teacher assigned successfully.');
+        $teacherId = (int) $request->validated('teacher_id');
+
+        $softDeleted = TeacherSectionAssignment::onlyTrashed()
+            ->where('section_id', $section->id)
+            ->where('user_id', $teacherId)
+            ->first();
+
+        if ($softDeleted) {
+            $softDeleted->restore();
+        } else {
+            $exists = TeacherSectionAssignment::where('section_id', $section->id)
+                ->where('user_id', $teacherId)
+                ->exists();
+
+            if ($exists) {
+                return back()->withErrors(['teacher_id' => 'This teacher is already assigned to this section.']);
+            }
+
+            TeacherSectionAssignment::create([
+                'section_id' => $section->id,
+                'user_id' => $teacherId,
+            ]);
+        }
+
+        $teacher = User::findOrFail($teacherId);
+        $teacher->notify(new TeacherAssignedNotification($section));
+
+        return back()->with('success', "{$teacher->name} assigned to {$section->name}.");
     }
 
     public function removeTeacher(Section $section, TeacherSectionAssignment $assignment)
     {
         $this->authorize('assignTeacher', $section);
 
+        $teacher = User::findOrFail($assignment->user_id);
+
         $assignment->delete();
 
-        return back()->with('success', 'Teacher removed successfully.');
+        $teacher->notify(new TeacherRemovedNotification($section));
+
+        return back()->with('success', "{$teacher->name} removed from {$section->name}.");
     }
 }

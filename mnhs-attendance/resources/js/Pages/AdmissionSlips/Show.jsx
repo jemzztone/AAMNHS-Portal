@@ -123,9 +123,7 @@ export default function Show({ slip }) {
                                     Attachment
                                 </p>
                                 <a
-                                    href={`/storage/${slip.attachment_path}`}
-                                    target="_blank"
-                                    rel="noreferrer"
+                                    href={route('admission-slips.attachment', slip.id)}
                                     className="mt-2 inline-flex items-center gap-2 rounded-lg bg-navy-50 px-3.5 py-2 text-sm font-semibold text-navy-700 ring-1 ring-inset ring-navy-100 transition hover:bg-navy-100"
                                 >
                                     <svg

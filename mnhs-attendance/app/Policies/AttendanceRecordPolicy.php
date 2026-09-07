@@ -20,7 +20,7 @@ class AttendanceRecordPolicy
 
         if ($user->role === 'teacher') {
             return $user->assignedSections()
-                ->where('sections.id', $attendanceRecord->section_id)
+                ->where('sections.id', $attendanceRecord->student?->section_id)
                 ->exists();
         }
 
@@ -46,7 +46,7 @@ class AttendanceRecordPolicy
 
         if ($user->role === 'teacher') {
             return $user->assignedSections()
-                ->where('sections.id', $attendanceRecord->section_id)
+                ->where('sections.id', $attendanceRecord->student?->section_id)
                 ->exists();
         }
 

@@ -14,7 +14,7 @@ class AcademicYearController extends Controller
 
         $academicYears = AcademicYear::withCount('sections')
             ->latest()
-            ->paginate(25);
+            ->paginate(5);
 
         return Inertia::render('AcademicYears/Index', [
             'academicYears' => $academicYears,

@@ -120,21 +120,36 @@ class SecurityAndEdgeCasesTest extends TestCase
             ->assertRedirect(route('login'));
     }
 
-    public function test_force_password_change_redirects_to_confirm(): void
+    public function test_user_can_access_dashboard_after_login(): void
     {
         $user = $this->makeUser('student');
-        $user->update(['force_password_change' => true]);
+        $student = $this->makeStudent($user);
 
+        // After login, user should be able to access dashboard directly
+        // No more force password change hassle
         $this->actingAs($user)
             ->get(route('dashboard'))
-            ->assertRedirect(route('password.confirm'));
+            ->assertOk();
     }
 
-    public function test_force_password_change_allows_password_update(): void
+    public function test_password_update_requires_current_password(): void
     {
         $user = $this->makeUser('student');
-        $user->update(['force_password_change' => true]);
 
+        // Updating password without current_password should fail
+        $this->actingAs($user)
+            ->put(route('password.update'), [
+                'password' => 'NewPassword123!',
+                'password_confirmation' => 'NewPassword123!',
+            ])
+            ->assertSessionHasErrors('current_password');
+    }
+
+    public function test_password_update_with_current_password_succeeds(): void
+    {
+        $user = $this->makeUser('student');
+
+        // Updating password with correct current_password should succeed
         $this->actingAs($user)
             ->put(route('password.update'), [
                 'password' => 'NewPassword123!',

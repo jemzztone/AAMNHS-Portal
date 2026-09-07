@@ -4,9 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Actions\Ai\QueryAssistant;
 use App\Http\Requests\AiQueryRequest;
+use Inertia\Inertia;
 
 class AiController extends Controller
 {
+    public function index()
+    {
+        return Inertia::render('Ai/Index');
+    }
+
     public function query(AiQueryRequest $request)
     {
         $answer = (new QueryAssistant)->handle(

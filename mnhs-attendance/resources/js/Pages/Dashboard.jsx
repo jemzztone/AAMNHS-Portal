@@ -1,5 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
+import { useEffect } from 'react';
 
 const roleNames = {
     super_admin: 'Super Admin',
@@ -72,6 +73,14 @@ const ICONS = {
     ),
 };
 
+function formatTime12(time) {
+    if (!time) return '—';
+    const [h, m] = time.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    return `${hour % 12 || 12}:${m} ${ampm}`;
+}
+
 function StatCard({ title, value, color = 'blue', icon }) {
     const tones = {
         blue: 'from-navy-50 to-navy-100/60 text-navy-800 ring-navy-700/10',
@@ -109,7 +118,7 @@ function StatCard({ title, value, color = 'blue', icon }) {
                 <dt className="truncate text-xs font-semibold uppercase tracking-wider opacity-70">
                     {title}
                 </dt>
-                <dd className="mt-0.5 text-3xl font-bold tracking-tight">
+                <dd className="mt-0.5 text-2xl sm:text-3xl font-bold tracking-tight">
                     {value ?? 0}
                 </dd>
             </div>
@@ -121,10 +130,23 @@ export default function Dashboard({
     user,
     stats,
     recent_attendance,
+    recent_scans,
     today_attendance,
     recent_slips,
+    student_qr,
 }) {
     const isStaff = ['super_admin', 'admin', 'teacher'].includes(user.role);
+    const isGuard = user.role === 'security_guard';
+
+    useEffect(() => {
+        if (!isStaff && !isGuard) return;
+        const interval = setInterval(() => {
+            router.reload({
+                only: ['stats', 'recent_attendance', 'recent_scans'],
+            });
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [isStaff, isGuard]);
 
     const quickActions = [
         {
@@ -249,17 +271,26 @@ export default function Dashboard({
                         </>
                     ) : (
                         <>
-                            <StatCard
-                                title={
-                                    user.role === 'teacher'
-                                        ? 'My Students'
-                                        : 'Total Students'
-                                }
-                                value={
-                                    stats.my_students || stats.total_students
-                                }
-                                color="blue"
-                            />
+                            {user.role === 'security_guard' ? (
+                                <StatCard
+                                    title="Scanned Today"
+                                    value={stats.scanned_today}
+                                    color="blue"
+                                />
+                            ) : (
+                                <StatCard
+                                    title={
+                                        user.role === 'teacher'
+                                            ? 'My Students'
+                                            : 'Total Students'
+                                    }
+                                    value={
+                                        stats.my_students ||
+                                        stats.total_students
+                                    }
+                                    color="blue"
+                                />
+                            )}
                             <StatCard
                                 title="Present Today"
                                 value={stats.present_today}
@@ -316,7 +347,60 @@ export default function Dashboard({
 
                 {/* Student view */}
                 {user.role === 'student' ? (
-                    <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+                        {/* My QR Code */}
+                        <section className="card card-pad">
+                            <div className="flex items-center gap-3">
+                                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
+                                    <svg
+                                        className="h-[18px] w-[18px]"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        strokeWidth="1.8"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
+                                        />
+                                    </svg>
+                                </span>
+                                <h3 className="surface-title">
+                                    My QR Code
+                                </h3>
+                            </div>
+                            <div className="mt-4 text-center">
+                                {student_qr?.qr_svg ? (
+                                    <>
+                                        <div
+                                            className="mx-auto inline-block rounded-xl border border-slate-200 bg-white p-3"
+                                            dangerouslySetInnerHTML={{
+                                                __html: student_qr.qr_svg,
+                                            }}
+                                        />
+                                        <p className="mt-3 text-sm font-bold text-slate-900">
+                                            {student_qr.full_name}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            LRN: {student_qr.lrn}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            {student_qr.grade_level} — {student_qr.section}
+                                        </p>
+                                        <p className="mt-3 text-[11px] text-slate-400">
+                                            Show this QR code at the gate for scanning.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-slate-500">
+                                        QR code not available.
+                                    </p>
+                                )}
+                            </div>
+                        </section>
+
                         <section className="card card-pad">
                             <div className="flex items-center gap-3">
                                 <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
@@ -346,9 +430,17 @@ export default function Dashboard({
                                         <span className="text-sm text-slate-600">
                                             Time in:{' '}
                                             <span className="font-semibold text-slate-900">
-                                                {today_attendance.time_in}
+                                                {formatTime12(today_attendance.time_in)}
                                             </span>
                                         </span>
+                                        {today_attendance.time_out && (
+                                            <span className="text-sm text-slate-600">
+                                                Time out:{' '}
+                                                <span className="font-semibold text-slate-900">
+                                                    {formatTime12(today_attendance.time_out)}
+                                                </span>
+                                            </span>
+                                        )}
                                     </div>
                                 ) : (
                                     <p className="text-sm text-slate-500">
@@ -418,11 +510,16 @@ export default function Dashboard({
                                     {ICONS.green}
                                 </svg>
                             </span>
-                            <h3 className="surface-title">Recent Attendance</h3>
+                            <h3 className="surface-title">
+                                {isGuard
+                                    ? "Today's Recent Scans"
+                                    : 'Recent Attendance'}
+                            </h3>
                         </div>
                         <div className="mt-4">
-                            {recent_attendance &&
-                            recent_attendance.length > 0 ? (
+                            {(isGuard ? recent_scans : recent_attendance) &&
+                            (isGuard ? recent_scans : recent_attendance)
+                                .length > 0 ? (
                                 <div className="table-wrap">
                                     <table className="table">
                                         <thead className="thead">
@@ -431,10 +528,14 @@ export default function Dashboard({
                                                 <th className="th">Section</th>
                                                 <th className="th">Status</th>
                                                 <th className="th">Time In</th>
+                                                <th className="th">Time Out</th>
                                             </tr>
                                         </thead>
                                         <tbody className="tbody">
-                                            {recent_attendance.map((record) => (
+                                            {(isGuard
+                                                ? recent_scans
+                                                : recent_attendance
+                                            ).map((record) => (
                                                 <tr key={record.id}>
                                                     <td className="td font-medium text-slate-900">
                                                         {
@@ -443,7 +544,10 @@ export default function Dashboard({
                                                         }
                                                     </td>
                                                     <td className="td text-slate-600">
-                                                        {record.section?.name}
+                                                        {
+                                                            record.student
+                                                                ?.section?.name
+                                                        }
                                                     </td>
                                                     <td className="td">
                                                         {statusBadge(
@@ -451,7 +555,10 @@ export default function Dashboard({
                                                         )}
                                                     </td>
                                                     <td className="td text-slate-600">
-                                                        {record.time_in}
+                                                        {formatTime12(record.time_in)}
+                                                    </td>
+                                                    <td className="td text-slate-600">
+                                                        {formatTime12(record.time_out)}
                                                     </td>
                                                 </tr>
                                             ))}

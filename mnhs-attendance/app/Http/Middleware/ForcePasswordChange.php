@@ -13,11 +13,17 @@ class ForcePasswordChange
         $user = $request->user();
 
         if ($user && $user->force_password_change === true) {
-            if ($request->routeIs('password.update') || $request->routeIs('password.confirm') || $request->routeIs('logout')) {
+            // Only the password change form (on the profile page), the
+            // password update endpoint, and logout are reachable until the
+            // password has been changed. Every other route redirects here,
+            // so the user cannot get stuck on a confirmation-only screen.
+            if ($request->routeIs('profile.edit')
+                || $request->routeIs('password.update')
+                || $request->routeIs('logout')) {
                 return $next($request);
             }
 
-            return redirect()->route('password.confirm')
+            return redirect()->route('profile.edit')
                 ->with('status', 'You must change your password before continuing.');
         }
 

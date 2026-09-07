@@ -7,6 +7,7 @@ use App\Models\AttendanceRecord;
 use App\Models\Section;
 use App\Models\Student;
 use App\Models\User;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class BuildDashboard
 {
@@ -40,7 +41,7 @@ class BuildDashboard
                 'absent_today' => AttendanceRecord::forDate($today)->where('status', 'absent')->count(),
                 'pending_slips' => AdmissionSlip::pending()->count(),
             ],
-            'recent_attendance' => AttendanceRecord::with(['student', 'section'])
+            'recent_attendance' => AttendanceRecord::with('student.section')
                 ->forDate($today)
                 ->latest()
                 ->take(10)
@@ -55,18 +56,19 @@ class BuildDashboard
     {
         $today = now()->toDateString();
         $sectionIds = $user->assignedSections()->pluck('sections.id');
+        $inSections = fn ($q) => $q->whereIn('section_id', $sectionIds);
 
         return [
             'stats' => [
                 'my_students' => Student::active()->whereIn('section_id', $sectionIds)->count(),
-                'present_today' => AttendanceRecord::forDate($today)->whereIn('section_id', $sectionIds)->where('status', 'present')->count(),
-                'late_today' => AttendanceRecord::forDate($today)->whereIn('section_id', $sectionIds)->where('status', 'late')->count(),
-                'absent_today' => AttendanceRecord::forDate($today)->whereIn('section_id', $sectionIds)->where('status', 'absent')->count(),
+                'present_today' => AttendanceRecord::forDate($today)->whereHas('student', $inSections)->where('status', 'present')->count(),
+                'late_today' => AttendanceRecord::forDate($today)->whereHas('student', $inSections)->where('status', 'late')->count(),
+                'absent_today' => AttendanceRecord::forDate($today)->whereHas('student', $inSections)->where('status', 'absent')->count(),
                 'pending_slips' => AdmissionSlip::pending()->whereHas('student', fn ($q) => $q->whereIn('section_id', $sectionIds))->count(),
             ],
-            'recent_attendance' => AttendanceRecord::with(['student', 'section'])
+            'recent_attendance' => AttendanceRecord::with('student.section')
                 ->forDate($today)
-                ->whereIn('section_id', $sectionIds)
+                ->whereHas('student', $inSections)
                 ->latest()
                 ->take(10)
                 ->get(),
@@ -81,6 +83,21 @@ class BuildDashboard
         $student = $user->student;
         $today = now()->toDateString();
 
+        if (! $student) {
+            return [
+                'stats' => [
+                    'total_present' => 0,
+                    'total_late' => 0,
+                    'total_absent' => 0,
+                    'pending_slips' => 0,
+                ],
+                'today_attendance' => null,
+                'recent_slips' => collect(),
+                'student_qr' => null,
+                'message' => 'Your student profile is not yet set up. Please contact the administration.',
+            ];
+        }
+
         return [
             'stats' => [
                 'total_present' => AttendanceRecord::forStudent($student->id)->where('status', 'present')->count(),
@@ -90,6 +107,13 @@ class BuildDashboard
             ],
             'today_attendance' => AttendanceRecord::forStudent($student->id)->forDate($today)->first(),
             'recent_slips' => AdmissionSlip::forStudent($student->id)->latest()->take(5)->get(),
+            'student_qr' => [
+                'qr_svg' => (string) QrCode::size(200)->generate($student->qr_token),
+                'full_name' => $student->full_name,
+                'lrn' => $student->lrn,
+                'section' => $student->section?->name,
+                'grade_level' => $student->section?->gradeLevel?->name,
+            ],
         ];
     }
 
@@ -106,7 +130,7 @@ class BuildDashboard
                 'present_today' => AttendanceRecord::forDate($today)->where('status', 'present')->count(),
                 'late_today' => AttendanceRecord::forDate($today)->where('status', 'late')->count(),
             ],
-            'recent_scans' => AttendanceRecord::with(['student', 'section'])
+            'recent_scans' => AttendanceRecord::with('student.section')
                 ->forDate($today)
                 ->where('source', 'scan')
                 ->latest()

@@ -1,12 +1,27 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 
-export default function ImportCsv({ sections }) {
-    const { data, setData, post, processing, errors, progress } = useForm({
+export default function ImportCsv({ sections, user, xlsxSupported = false }) {
+    const { props: { flash } } = usePage();
+    const { data, setData, post, processing, errors } = useForm({
         csv_file: null,
         section_id: '',
     });
+
+    // Determine allowed file types based on user role
+    const userRole = user?.role || '';
+    const isAdminOrTeacher = userRole === 'admin' || userRole === 'teacher';
+    
+    // Only allow XLSX if: admin/teacher AND server supports ZipArchive
+    const allowXlsx = isAdminOrTeacher && xlsxSupported;
+    
+    // Build accept attribute: always CSV/TXT, XLSX/XLS only if allowed
+    const fileTypes = ['.csv', '.txt'];
+    if (allowXlsx) {
+        fileTypes.push('.xlsx', '.xls');
+    }
+    const acceptedFileTypes = fileTypes.join(',');
 
     const [dragActive, setDragActive] = useState(false);
 
@@ -65,7 +80,7 @@ export default function ImportCsv({ sections }) {
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
                             </svg>
                         </span>
-                        <h3 className="surface-title">CSV Format</h3>
+                        <h3 className="surface-title">File Format</h3>
                     </div>
                     <div className="mt-4 rounded-xl bg-slate-50 p-4 ring-1 ring-inset ring-slate-200">
                         <p className="text-sm font-medium text-slate-700">Required columns:</p>
@@ -79,6 +94,62 @@ export default function ImportCsv({ sections }) {
                         <p className="mt-3 text-xs text-slate-500">
                             Example: <span className="font-mono">Juan,Dela Cruz,2026-00001,,Parent Juan,juan.parent@email.com</span>
                         </p>
+                        {isAdminOrTeacher && (
+                            <div className="mt-3 rounded-lg bg-slate-50 p-3 ring-1 ring-inset ring-slate-200">
+                                {xlsxSupported ? (
+                                    <div className="flex items-center gap-2">
+                                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-700">
+                                                Excel files supported
+                                            </p>
+                                            <p className="text-[11px] text-slate-400">
+                                                You can import .xlsx or .xls files in addition to CSV.
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <svg className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                                        </svg>
+                                        <div>
+                                            <p className="text-xs font-medium text-slate-500">
+                                                CSV files only
+                                            </p>
+                                            <p className="text-[11px] text-slate-400">
+                                                Excel (.xlsx) import is not configured on this server.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <button
+                            onClick={() =>
+                                (window.location.href = route(
+                                    'students.import-csv.template',
+                                ))
+                            }
+                            className="btn-outline mt-4"
+                        >
+                            <svg
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth="1.8"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                                />
+                            </svg>
+                            Download CSV Template
+                        </button>
                     </div>
                 </div>
 
@@ -122,7 +193,7 @@ export default function ImportCsv({ sections }) {
                             onDragLeave={handleDrag}
                             onDragOver={handleDrag}
                             onDrop={handleDrop}
-                            className={`relative rounded-xl border-2 border-dashed p-8 text-center transition ${
+                            className={`relative rounded-xl border-2 border-dashed p-4 sm:p-8 text-center transition ${
                                 dragActive
                                     ? 'border-navy-400 bg-navy-50'
                                     : data.csv_file
@@ -132,7 +203,7 @@ export default function ImportCsv({ sections }) {
                         >
                             <input
                                 type="file"
-                                accept=".csv,.txt"
+                                accept={acceptedFileTypes}
                                 onChange={handleFileChange}
                                 className="absolute inset-0 cursor-pointer opacity-0"
                             />
@@ -158,7 +229,12 @@ export default function ImportCsv({ sections }) {
                                         Drop your CSV file here, or click to browse
                                     </p>
                                     <p className="mt-1 text-xs text-slate-400">
-                                        Max file size: 5MB
+                                        Max file size: 10MB
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {isAdminOrTeacher && xlsxSupported
+                                            ? 'Accepted formats: CSV (.csv, .txt), Excel (.xlsx, .xls)'
+                                            : 'Accepted formats: CSV (.csv, .txt)'}
                                     </p>
                                 </div>
                             )}

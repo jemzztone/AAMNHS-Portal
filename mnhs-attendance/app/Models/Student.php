@@ -47,15 +47,35 @@ class Student extends Model
                 $model->qr_token = (string) Str::uuid();
             }
         });
+
+        // Keep Student.is_active in sync with the linked User.is_active.
+        // The DB trigger (migration 2026_09_06_110000) is the authoritative
+        // guarantee for both directions; this hook covers the ORM path
+        // student → user as defense-in-depth.
+        static::updating(function (Student $student) {
+            if ($student->isDirty('is_active') && $student->user_id) {
+                User::where('id', $student->user_id)
+                    ->update(['is_active' => $student->is_active]);
+            }
+        });
     }
 
-    protected $appends = ['full_name'];
+    protected $appends = ['full_name', 'photo_url'];
 
     public function getFullNameAttribute(): string
     {
         $parts = array_filter([$this->first_name, $this->middle_name, $this->last_name]);
 
         return implode(' ', $parts);
+    }
+
+    public function getPhotoUrlAttribute(): ?string
+    {
+        if (! $this->photo_path) {
+            return null;
+        }
+
+        return route('students.photo', ['filename' => basename($this->photo_path)]);
     }
 
     public function user()

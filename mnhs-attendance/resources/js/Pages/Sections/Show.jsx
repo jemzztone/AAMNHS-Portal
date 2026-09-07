@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 function InfoCard({ label, value }) {
     return (
@@ -12,29 +12,8 @@ function InfoCard({ label, value }) {
     );
 }
 
-export default function Show({ section, teachers }) {
+export default function Show({ section }) {
     const user = usePage().props.auth.user;
-
-    const { data, setData, post, processing, errors } = useForm({
-        teacher_id: '',
-    });
-
-    const assignTeacher = (e) => {
-        e.preventDefault();
-        post(route('sections.assign-teacher', section), {
-            preserveScroll: true,
-            onSuccess: () => setData('teacher_id', ''),
-        });
-    };
-
-    const removeTeacher = (assignment) => {
-        if (confirm('Remove this teacher from the section?')) {
-            router.delete(
-                route('sections.remove-teacher', [section, assignment]),
-                { preserveScroll: true },
-            );
-        }
-    };
 
     const canManage = ['super_admin', 'admin'].includes(user?.role);
 
@@ -125,45 +104,19 @@ export default function Show({ section, teachers }) {
                             {section.teachers.map((teacher) => (
                                 <li
                                     key={teacher.id}
-                                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-2.5"
+                                    className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-2.5"
                                 >
-                                    <span className="flex items-center gap-2.5">
-                                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-navy-100 text-xs font-bold text-navy-800">
-                                            {teacher.name
-                                                .split(' ')
-                                                .map((p) => p[0])
-                                                .slice(0, 2)
-                                                .join('')
-                                                .toUpperCase()}
-                                        </span>
-                                        <span className="text-sm font-semibold text-slate-900">
-                                            {teacher.name}
-                                        </span>
+                                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-navy-100 text-xs font-bold text-navy-800">
+                                        {teacher.name
+                                            .split(' ')
+                                            .map((p) => p[0])
+                                            .slice(0, 2)
+                                            .join('')
+                                            .toUpperCase()}
                                     </span>
-                                    {canManage && (
-                                        <button
-                                            onClick={() =>
-                                                removeTeacher(teacher.pivot.id)
-                                            }
-                                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                                        >
-                                            <svg
-                                                className="h-3.5 w-3.5"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                strokeWidth="1.8"
-                                                stroke="currentColor"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    d="M6 18L18 6M6 6l12 12"
-                                                />
-                                            </svg>
-                                            Remove
-                                        </button>
-                                    )}
+                                    <span className="text-sm font-semibold text-slate-900">
+                                        {teacher.name}
+                                    </span>
                                 </li>
                             ))}
                         </ul>
@@ -172,63 +125,11 @@ export default function Show({ section, teachers }) {
                             No teacher assigned yet.
                         </p>
                     )}
-
-                    {canManage && (
-                        <form
-                            onSubmit={assignTeacher}
-                            className="mt-5 flex flex-wrap items-end gap-3 border-t border-slate-100 pt-5"
-                        >
-                            <div className="min-w-[220px] flex-1">
-                                <label htmlFor="teacher_id" className="input-label">
-                                    Assign Teacher
-                                </label>
-                                <select
-                                    id="teacher_id"
-                                    value={data.teacher_id}
-                                    onChange={(e) =>
-                                        setData('teacher_id', e.target.value)
-                                    }
-                                    className="input mt-1.5"
-                                >
-                                    <option value="">Select Teacher</option>
-                                    {(teachers || [])
-                                        .filter(
-                                            (teacher) =>
-                                                !(section.teachers || []).some(
-                                                    (assigned) =>
-                                                        assigned.id ===
-                                                        teacher.id,
-                                                ),
-                                        )
-                                        .map((teacher) => (
-                                            <option
-                                                key={teacher.id}
-                                                value={teacher.id}
-                                            >
-                                                {teacher.name}
-                                            </option>
-                                        ))}
-                                </select>
-                                {errors.teacher_id && (
-                                    <p className="mt-1.5 text-xs text-red-600">
-                                        {errors.teacher_id}
-                                    </p>
-                                )}
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={processing}
-                                className="btn-primary"
-                            >
-                                Assign
-                            </button>
-                        </form>
-                    )}
                 </div>
 
                 {/* Schedules */}
                 <div className="card overflow-hidden">
-                    <div className="border-b border-slate-100 px-6 py-5">
+                    <div className="border-b border-slate-100 px-4 sm:px-6 py-5">
                         <h3 className="surface-title">Weekly Schedule</h3>
                     </div>
                     {section.schedules && section.schedules.length > 0 ? (
@@ -271,7 +172,7 @@ export default function Show({ section, teachers }) {
 
                 {/* Students */}
                 <div className="card overflow-hidden">
-                    <div className="border-b border-slate-100 px-6 py-5">
+                    <div className="border-b border-slate-100 px-4 sm:px-6 py-5">
                         <h3 className="surface-title">
                             Students in Section
                         </h3>

@@ -17,7 +17,7 @@ class AuditLogController extends Controller
             ->when($request->user_id, fn ($q, $userId) => $q->where('user_id', $userId))
             ->when($request->auditable_type, fn ($q, $type) => $q->where('auditable_type', $type));
 
-        $logs = $query->latest()->paginate($request->get('per_page', 50));
+        $logs = $query->latest()->paginate(min(max((int) $request->get('per_page', 5), 1), 100));
 
         $events = AuditLog::distinct()->pluck('event')->sort()->values();
 

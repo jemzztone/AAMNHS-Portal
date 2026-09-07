@@ -53,7 +53,7 @@ class SectionScheduleController extends Controller
 
         $section->schedules()->create($validated);
 
-        return redirect()->route('section-schedules.index', $section)
+        return redirect()->route('schedules.index', $section)
             ->with('success', 'Schedule created successfully.');
     }
 
@@ -101,7 +101,7 @@ class SectionScheduleController extends Controller
 
         $sectionSchedule->update($validated);
 
-        return redirect()->route('section-schedules.index', $section)
+        return redirect()->route('schedules.index', $section)
             ->with('success', 'Schedule updated successfully.');
     }
 
@@ -111,7 +111,7 @@ class SectionScheduleController extends Controller
 
         $sectionSchedule->delete();
 
-        return redirect()->route('section-schedules.index', $section)
+        return redirect()->route('schedules.index', $section)
             ->with('success', 'Schedule deleted successfully.');
     }
 }

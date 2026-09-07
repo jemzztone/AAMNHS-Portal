@@ -27,21 +27,30 @@ class RecordManualAttendance
             $previous = [
                 'status' => $existing->status,
                 'time_in' => $existing->time_in,
+                'time_out' => $existing->time_out,
             ];
 
-            $existing->update([
+            $updateData = [
                 'status' => $data['status'],
-                'section_id' => $student->section_id,
                 'source' => 'manual',
                 'recorded_by' => $actor->id,
-            ]);
+            ];
+
+            if (array_key_exists('time_out', $data)) {
+                $updateData['time_out'] = $data['time_out'];
+            }
+
+            $existing->update($updateData);
 
             (new LogAuditEvent)->handle(
                 event: 'attendance.updated',
                 auditable: $existing,
                 actor: $actor,
                 oldValues: $previous,
-                newValues: ['status' => $existing->status],
+                newValues: [
+                    'status' => $existing->status,
+                    'time_out' => $existing->time_out,
+                ],
                 ip: $ip,
                 userAgent: $userAgent,
             );
@@ -51,7 +60,6 @@ class RecordManualAttendance
 
         $record = AttendanceRecord::create([
             'student_id' => $student->id,
-            'section_id' => $student->section_id,
             'date' => $data['date'],
             'status' => $data['status'],
             'source' => 'manual',

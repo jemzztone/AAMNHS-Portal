@@ -22,8 +22,10 @@ class PasswordController extends Controller
 
         $request->user()->update([
             'password' => Hash::make($validated['password']),
+            // Any pending forced change is satisfied once the password is set.
+            'force_password_change' => false,
         ]);
 
-        return back();
+        return back()->with('status', 'Password updated successfully.');
     }
 }

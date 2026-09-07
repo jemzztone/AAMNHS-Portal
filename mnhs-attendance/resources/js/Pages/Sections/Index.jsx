@@ -1,7 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 
 export default function Index({ sections }) {
+    const { auth } = usePage().props;
+    const canManage = ['super_admin', 'admin'].includes(auth.user?.role);
+
     return (
         <AuthenticatedLayout
             header={
@@ -10,23 +13,25 @@ export default function Index({ sections }) {
                         <p className="page-eyebrow">Organization</p>
                         <h2 className="surface-title">Sections</h2>
                     </div>
-                    <Link href={route('sections.create')} className="btn-primary">
-                        <svg
-                            className="h-4 w-4"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth="2"
-                            stroke="currentColor"
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M12 4.5v15m7.5-7.5h-15"
-                            />
-                        </svg>
-                        Add Section
-                    </Link>
+                    {canManage && (
+                        <Link href={route('sections.create')} className="btn-primary">
+                            <svg
+                                className="h-4 w-4"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth="2"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 4.5v15m7.5-7.5h-15"
+                                />
+                            </svg>
+                            Add Section
+                        </Link>
+                    )}
                 </div>
             }
         >
@@ -102,15 +107,17 @@ export default function Index({ sections }) {
                                                 >
                                                     View
                                                 </Link>
-                                                <Link
-                                                    href={route(
-                                                        'sections.edit',
-                                                        section,
-                                                    )}
-                                                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                                                >
-                                                    Edit
-                                                </Link>
+                                                {canManage && (
+                                                    <Link
+                                                        href={route(
+                                                            'sections.edit',
+                                                            section,
+                                                        )}
+                                                        className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                                                    >
+                                                        Edit
+                                                    </Link>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

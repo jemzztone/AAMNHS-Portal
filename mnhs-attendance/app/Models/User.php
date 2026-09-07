@@ -18,6 +18,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'email_verified_at',
         'role',
         'phone',
         'is_active',
@@ -51,7 +52,9 @@ class User extends Authenticatable
 
     public function assignedSections()
     {
-        return $this->belongsToMany(Section::class, 'teacher_section_assignments', 'user_id', 'section_id');
+        return $this->belongsToMany(Section::class, 'teacher_section_assignments', 'user_id', 'section_id')
+            ->withPivot('id')
+            ->whereNull('teacher_section_assignments.deleted_at');
     }
 
     public function isSuperAdmin(): bool
@@ -97,5 +100,24 @@ class User extends Authenticatable
     public function canApproveAdmissionSlips(): bool
     {
         return in_array($this->role, ['super_admin', 'admin', 'teacher']);
+    }
+
+    public function canManageUsers(): bool
+    {
+        return in_array($this->role, ['super_admin', 'admin']);
+    }
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        // Keep the linked Student.is_active in sync with User.is_active.
+        // The DB trigger (migration 2026_09_06_110000) is the authoritative
+        // guarantee; this covers the ORM path as defense-in-depth.
+        static::updating(function (User $user) {
+            if ($user->isDirty('is_active') && $user->student) {
+                $user->student->update(['is_active' => $user->is_active]);
+            }
+        });
     }
 }

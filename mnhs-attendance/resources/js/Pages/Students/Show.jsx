@@ -1,6 +1,14 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 
+function formatTime12(time) {
+    if (!time) return '—';
+    const [h, m] = time.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    return `${hour % 12 || 12}:${m} ${ampm}`;
+}
+
 function statusBadge(status) {
     const map = {
         present: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -113,9 +121,17 @@ export default function Show({ student, qr_svg }) {
                 <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-navy-950 via-navy-900 to-navy-800 p-6 text-white sm:p-8">
                     <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-navy-500/20 blur-3xl" />
                     <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center">
-                        <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-xl font-bold ring-1 ring-white/20">
-                            {initials}
-                        </span>
+                        {student.photo_url ? (
+                            <img
+                                src={student.photo_url}
+                                alt={student.full_name}
+                                className="h-20 w-20 shrink-0 rounded-2xl object-cover ring-2 ring-white/20"
+                            />
+                        ) : (
+                            <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-xl font-bold ring-1 ring-white/20">
+                                {initials}
+                            </span>
+                        )}
                         <div className="min-w-0">
                             <p className="text-lg font-bold">
                                 {student.full_name}
@@ -241,7 +257,7 @@ export default function Show({ student, qr_svg }) {
 
                     {/* Recent Attendance */}
                     <div className="card overflow-hidden lg:col-span-3">
-                        <div className="flex items-center gap-3 border-b border-slate-100 px-6 py-5">
+                        <div className="flex items-center gap-3 border-b border-slate-100 px-4 sm:px-6 py-5">
                             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy-50 text-navy-700">
                                 <svg
                                     className="h-[18px] w-[18px]"
@@ -285,7 +301,7 @@ export default function Show({ student, qr_svg }) {
                                                         )}
                                                     </td>
                                                     <td className="td text-slate-600">
-                                                        {record.time_in || '—'}
+                                                        {formatTime12(record.time_in)}
                                                     </td>
                                                     <td className="td capitalize text-slate-600">
                                                         {record.source}

@@ -21,6 +21,7 @@ class ManualAttendanceRequest extends FormRequest
             'student_id' => 'required|exists:students,id',
             'date' => 'required|date',
             'status' => 'required|in:present,late,absent',
+            'time_out' => 'nullable|date_format:H:i:s',
         ];
     }
 }

@@ -35,7 +35,7 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'super_admin',
             'is_active' => true,
-            'force_password_change' => true,
+            'force_password_change' => false,
             'email_verified_at' => now(),
         ]);
 
@@ -45,7 +45,7 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'admin',
             'is_active' => true,
-            'force_password_change' => true,
+            'force_password_change' => false,
             'email_verified_at' => now(),
         ]);
 
@@ -55,7 +55,7 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'teacher',
             'is_active' => true,
-            'force_password_change' => true,
+            'force_password_change' => false,
             'email_verified_at' => now(),
         ]);
 
@@ -65,7 +65,7 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'security_guard',
             'is_active' => true,
-            'force_password_change' => true,
+            'force_password_change' => false,
             'email_verified_at' => now(),
         ]);
 
@@ -75,7 +75,7 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'student',
             'is_active' => true,
-            'force_password_change' => true,
+            'force_password_change' => false,
             'email_verified_at' => now(),
         ]);
 
@@ -148,11 +148,11 @@ class DatabaseSeeder extends Seeder
         $studentUser = User::find(config('mnhs.student_user_id'));
 
         $studentData = [
-            ['first_name' => 'Maria', 'last_name' => 'Santos', 'lrn' => '2026-00001'],
-            ['first_name' => 'Jose', 'last_name' => 'Reyes', 'lrn' => '2026-00002'],
-            ['first_name' => 'Ana', 'last_name' => 'Cruz', 'lrn' => '2026-00003'],
-            ['first_name' => 'Pedro', 'last_name' => 'Garcia', 'lrn' => '2026-00004'],
-            ['first_name' => 'Rosa', 'last_name' => 'Mendoza', 'lrn' => '2026-00005'],
+            ['first_name' => 'Maria', 'last_name' => 'Santos', 'lrn' => '136000000001'],
+            ['first_name' => 'Jose', 'last_name' => 'Reyes', 'lrn' => '136000000002'],
+            ['first_name' => 'Ana', 'last_name' => 'Cruz', 'lrn' => '136000000003'],
+            ['first_name' => 'Pedro', 'last_name' => 'Garcia', 'lrn' => '136000000004'],
+            ['first_name' => 'Rosa', 'last_name' => 'Mendoza', 'lrn' => '136000000005'],
         ];
 
         foreach ($studentData as $index => $data) {
@@ -162,7 +162,7 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('Password123!'),
                 'role' => 'student',
                 'is_active' => true,
-                'force_password_change' => true,
+                'force_password_change' => false,
                 'email_verified_at' => now(),
             ]);
 

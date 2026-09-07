@@ -30,7 +30,7 @@ export default function Create({ gradeLevels }) {
 
             <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="card overflow-hidden">
-                    <div className="border-b border-slate-100 bg-slate-50/60 px-6 py-4">
+                    <div className="border-b border-slate-100 bg-slate-50/60 px-4 sm:px-6 py-4">
                         <h3 className="text-sm font-bold text-slate-900">
                             Section Details
                         </h3>

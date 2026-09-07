@@ -1,12 +1,70 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-export default function Index({ students, sections, filters }) {
+const ALLOWED_ROLES = ['super_admin', 'admin'];
+
+function canImport({ user }) {
+    return ALLOWED_ROLES.includes(user?.role);
+}
+
+function Dropdown({ children, trigger }) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (ref.current && !ref.current.contains(e.target)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
+    return (
+        <div className="relative" ref={ref}>
+            <button
+                onClick={() => setOpen(!open)}
+                className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+            >
+                {trigger}
+            </button>
+            {open && (
+                <div className="absolute right-0 z-30 mt-1 w-48 origin-top-right rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                    {typeof children === 'function' ? children(() => setOpen(false)) : children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function DropdownItem({ href, onClick, className = '', children }) {
+    const content = (
+        <span className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-slate-50 ${className}`}>
+            {children}
+        </span>
+    );
+    return href ? (
+        <Link href={href} className="block">{content}</Link>
+    ) : (
+        <button onClick={onClick} className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-slate-50 ${className}`}>
+            {children}
+        </button>
+    );
+}
+
+export default function Index({ students, sections, filters, user }) {
     const [search, setSearch] = useState(filters.search || '');
     const [sectionId, setSectionId] = useState(filters.section_id || '');
     const { flash } = usePage().props;
     const [showImportResult, setShowImportResult] = useState(false);
+    const canImportStudents = canImport({ user });
+    const [suggestions, setSuggestions] = useState([]);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+    const searchWrapRef = useRef(null);
+    const debounceRef = useRef(null);
 
     useEffect(() => {
         if (flash?.import_result) {
@@ -16,10 +74,61 @@ export default function Index({ students, sections, filters }) {
         }
     }, [flash]);
 
+    useEffect(() => {
+        const handler = (e) => {
+            if (
+                searchWrapRef.current &&
+                !searchWrapRef.current.contains(e.target)
+            ) {
+                setShowSuggestions(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     const handleSearch = () => {
+        setShowSuggestions(false);
         router.get(
             route('students.index'),
             { search, section_id: sectionId },
+            { preserveState: true },
+        );
+    };
+
+    const handleSearchChange = (value) => {
+        setSearch(value);
+        setShowSuggestions(false);
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        const q = value.trim();
+        if (q.length < 2) {
+            setSuggestions([]);
+            return;
+        }
+
+        setSuggestionsLoading(true);
+        debounceRef.current = setTimeout(() => {
+            fetch(`${route('students.suggestions')}?q=${encodeURIComponent(q)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    setSuggestions(data || []);
+                    setShowSuggestions(true);
+                })
+                .catch(() => setSuggestions([]))
+                .finally(() => setSuggestionsLoading(false));
+        }, 250);
+    };
+
+    const pickSuggestion = (suggestion) => {
+        setSearch(suggestion.full_name);
+        setShowSuggestions(false);
+        router.get(
+            route('students.index'),
+            { search: suggestion.full_name, section_id: sectionId },
             { preserveState: true },
         );
     };
@@ -34,7 +143,7 @@ export default function Index({ students, sections, filters }) {
                     </div>
                     <div className="flex items-center gap-3">
                         <Link
-                            href={route('students.import-csv')}
+                            href={route('students.bulk-print-qr')}
                             className="btn-outline"
                         >
                             <svg
@@ -48,11 +157,33 @@ export default function Index({ students, sections, filters }) {
                                 <path
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
-                                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                                    d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659"
                                 />
                             </svg>
-                            Import CSV
+                            Bulk Print QR
                         </Link>
+                        {canImportStudents && (
+                            <Link
+                                href={route('students.import-csv')}
+                                className="btn-outline"
+                            >
+                                <svg
+                                    className="h-4 w-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth="2"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"
+                                    />
+                                </svg>
+                                Import CSV
+                            </Link>
+                        )}
                         <Link
                             href={route('students.create')}
                             className="btn-primary"
@@ -137,7 +268,7 @@ export default function Index({ students, sections, filters }) {
                 {/* Filters */}
                 <div className="card card-pad mb-6">
                     <div className="flex flex-col gap-3 md:flex-row">
-                        <div className="relative flex-1">
+                        <div className="relative flex-1" ref={searchWrapRef}>
                             <svg
                                 className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
                                 xmlns="http://www.w3.org/2000/svg"
@@ -156,12 +287,68 @@ export default function Index({ students, sections, filters }) {
                                 type="text"
                                 placeholder="Search by name or LRN..."
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                onKeyDown={(e) =>
-                                    e.key === 'Enter' && handleSearch()
-                                }
+                                onChange={(e) => handleSearchChange(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSearch();
+                                    if (e.key === 'Escape')
+                                        setShowSuggestions(false);
+                                }}
                                 className="input ps-9"
                             />
+
+                            {/* Autocomplete suggestions */}
+                            {showSuggestions && (
+                                <div className="absolute inset-x-0 z-30 mt-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                    {suggestionsLoading ? (
+                                        <p className="px-4 py-3 text-sm text-slate-400">
+                                            Searching...
+                                        </p>
+                                    ) : suggestions.length > 0 ? (
+                                        <ul className="max-h-72 divide-y divide-slate-100 overflow-y-auto">
+                                            {suggestions.map((suggestion) => (
+                                                <li key={suggestion.id}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            pickSuggestion(
+                                                                suggestion,
+                                                            )
+                                                        }
+                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition hover:bg-navy-50"
+                                                    >
+                                                        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy-100 text-[10px] font-bold text-navy-800">
+                                                            {suggestion.full_name
+                                                                .split(' ')
+                                                                .map((p) => p[0])
+                                                                .slice(0, 2)
+                                                                .join('')
+                                                                .toUpperCase()}
+                                                        </span>
+                                                        <span className="min-w-0 flex-1">
+                                                            <span className="block truncate text-sm font-semibold text-slate-900">
+                                                                {
+                                                                    suggestion.full_name
+                                                                }
+                                                            </span>
+                                                            <span className="block truncate text-xs text-slate-400">
+                                                                {suggestion.section
+                                                                    ? `${suggestion.section} · `
+                                                                    : ''}
+                                                                LRN{' '}
+                                                                {suggestion.lrn}
+                                                            </span>
+                                                        </span>
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="px-4 py-3 text-sm text-slate-400">
+                                            No matching students found.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                         <div className="md:w-56">
                             <select
@@ -204,14 +391,22 @@ export default function Index({ students, sections, filters }) {
                                     <tr key={student.id}>
                                         <td className="td">
                                             <div className="flex items-center gap-3">
-                                                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-100 text-xs font-bold text-navy-800">
-                                                    {student.full_name
-                                                        .split(' ')
-                                                        .map((part) => part[0])
-                                                        .slice(0, 2)
-                                                        .join('')
-                                                        .toUpperCase()}
-                                                </span>
+                                                {student.photo_url ? (
+                                                    <img
+                                                        src={student.photo_url}
+                                                        alt={student.full_name}
+                                                        className="h-9 w-9 shrink-0 rounded-full object-cover ring-1 ring-inset ring-slate-200"
+                                                    />
+                                                ) : (
+                                                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-100 text-xs font-bold text-navy-800">
+                                                        {student.full_name
+                                                            .split(' ')
+                                                            .map((part) => part[0])
+                                                            .slice(0, 2)
+                                                            .join('')
+                                                            .toUpperCase()}
+                                                    </span>
+                                                )}
                                                 <div className="min-w-0">
                                                     <p className="truncate font-semibold text-slate-900">
                                                         {student.full_name}
@@ -253,35 +448,30 @@ export default function Index({ students, sections, filters }) {
                                             </span>
                                         </td>
                                         <td className="td text-end">
-                                            <div className="inline-flex items-center gap-1">
-                                                <Link
-                                                    href={route(
-                                                        'students.show',
-                                                        student,
-                                                    )}
-                                                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-navy-700 transition hover:bg-navy-50"
-                                                >
-                                                    View
-                                                </Link>
-                                                <Link
-                                                    href={route(
-                                                        'students.edit',
-                                                        student,
-                                                    )}
-                                                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                                                >
-                                                    Edit
-                                                </Link>
-                                                <Link
-                                                    href={route(
-                                                        'students.print-qr',
-                                                        student,
-                                                    )}
-                                                    className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
-                                                >
-                                                    Print QR
-                                                </Link>
-                                            </div>
+                                            <Dropdown
+                                                trigger={
+                                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM12.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0zM18.75 12a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
+                                                    </svg>
+                                                }
+                                            >
+                                                {(close) => (
+                                                    <>
+                                                        <DropdownItem href={route('students.show', student)} onClick={close}>
+                                                            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                            View
+                                                        </DropdownItem>
+                                                        <DropdownItem href={route('students.edit', student)} onClick={close}>
+                                                            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" /></svg>
+                                                            Edit
+                                                        </DropdownItem>
+                                                        <DropdownItem href={route('students.print-qr', student)} onClick={close}>
+                                                            <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" /></svg>
+                                                            Print QR
+                                                        </DropdownItem>
+                                                    </>
+                                                )}
+                                            </Dropdown>
                                         </td>
                                     </tr>
                                 ))}

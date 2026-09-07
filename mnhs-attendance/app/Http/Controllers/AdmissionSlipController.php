@@ -10,8 +10,10 @@ use App\Http\Requests\StoreAdmissionSlipRequest;
 use App\Models\AdmissionSlip;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Symfony\Component\HttpFoundation\Response;
 
 class AdmissionSlipController extends Controller
 {
@@ -37,7 +39,7 @@ class AdmissionSlipController extends Controller
             }
         }
 
-        $slips = $query->latest()->paginate($request->get('per_page', 25));
+        $slips = $query->latest()->paginate(min(max((int) $request->get('per_page', 5), 1), 100));
 
         return Inertia::render('AdmissionSlips/Index', [
             'slips' => $slips,
@@ -85,6 +87,23 @@ class AdmissionSlipController extends Controller
         return Inertia::render('AdmissionSlips/Show', [
             'slip' => $admissionSlip,
         ]);
+    }
+
+    /**
+     * Stream the slip attachment from the private disk. Never expose these
+     * documents through the public /storage symlink — they can contain
+     * medical or personal information.
+     */
+    public function attachment(AdmissionSlip $admissionSlip): Response
+    {
+        $this->authorize('view', $admissionSlip);
+
+        if (! $admissionSlip->attachment_path
+            || ! Storage::disk('private')->exists($admissionSlip->attachment_path)) {
+            abort(404);
+        }
+
+        return Storage::disk('private')->download($admissionSlip->attachment_path);
     }
 
     public function approve(ReviewAdmissionSlipRequest $request, AdmissionSlip $admissionSlip)

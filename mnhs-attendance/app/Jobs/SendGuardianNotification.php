@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Mail\GuardianAttendanceNotification;
 use App\Models\GuardianNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -30,7 +31,8 @@ class SendGuardianNotification implements ShouldQueue
 
     public function handle(): void
     {
-        $notification = GuardianNotification::where('student_id', $this->studentId)
+        $notification = GuardianNotification::with('student')
+            ->where('student_id', $this->studentId)
             ->where('attendance_record_id', $this->attendanceRecordId)
             ->where('status', 'pending')
             ->first();
@@ -40,10 +42,17 @@ class SendGuardianNotification implements ShouldQueue
         }
 
         try {
-            Mail::raw($this->body, function ($message) {
-                $message->to($this->email)
-                    ->subject($this->subject);
-            });
+            $student = $notification->student;
+            $record = $notification->attendanceRecord;
+            $action = $record && $record->time_out ? 'time_out' : 'time_in';
+
+            Mail::to($this->email)->send(new GuardianAttendanceNotification(
+                student: $student,
+                action: $action,
+                date: $notification->created_at->format('F j, Y'),
+                time: ($action === 'time_in' ? $record?->time_in : $record?->time_out) ?: now()->format('h:i A'),
+                status: $action === 'time_out' ? 'Checked out' : ucfirst($record?->status ?? 'Present'),
+            ));
 
             $notification->update([
                 'status' => 'sent',

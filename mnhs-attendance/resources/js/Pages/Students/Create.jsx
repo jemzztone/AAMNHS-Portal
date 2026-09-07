@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PhotoUpload from '@/Components/PhotoUpload';
 import { Head, Link, useForm } from '@inertiajs/react';
 
 const FIELDS = [
@@ -8,16 +9,22 @@ const FIELDS = [
     { key: 'lrn', label: 'LRN (12 digits)', required: true, hint: 'Must be exactly 12 digits' },
 ];
 
-export default function Create({ sections }) {
+export default function Create({ sections, gradeLevels }) {
     const { data, setData, post, processing, errors } = useForm({
         first_name: '',
         last_name: '',
         middle_name: '',
         lrn: '',
+        grade_level_id: '',
         section_id: '',
         guardian_name: '',
         guardian_email: '',
+        photo: null,
     });
+
+    const filteredSections = data.grade_level_id
+        ? sections.filter((s) => s.grade_level_id === data.grade_level_id)
+        : sections;
 
     const submit = (e) => {
         e.preventDefault();
@@ -42,7 +49,7 @@ export default function Create({ sections }) {
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="card overflow-hidden">
-                    <div className="border-b border-slate-100 bg-slate-50/60 px-6 py-4">
+                    <div className="border-b border-slate-100 bg-slate-50/60 px-4 sm:px-6 py-4">
                         <h3 className="text-sm font-bold text-slate-900">
                             Personal Information
                         </h3>
@@ -95,6 +102,28 @@ export default function Create({ sections }) {
                             ))}
 
                             <div>
+                                <label htmlFor="grade_level_id" className="input-label">
+                                    Grade Level
+                                </label>
+                                <select
+                                    id="grade_level_id"
+                                    value={data.grade_level_id}
+                                    onChange={(e) => {
+                                        setData('grade_level_id', e.target.value);
+                                        setData('section_id', '');
+                                    }}
+                                    className="input mt-1.5"
+                                >
+                                    <option value="">All Grade Levels</option>
+                                    {gradeLevels.map((gl) => (
+                                        <option key={gl.id} value={gl.id}>
+                                            {gl.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
                                 <label htmlFor="section_id" className="input-label">
                                     Section <span className="text-red-500">*</span>
                                 </label>
@@ -108,7 +137,7 @@ export default function Create({ sections }) {
                                     required
                                 >
                                     <option value="">Select Section</option>
-                                    {sections.map((section) => (
+                                    {filteredSections.map((section) => (
                                         <option
                                             key={section.id}
                                             value={section.id}
@@ -174,6 +203,23 @@ export default function Create({ sections }) {
                                         className="input mt-1.5"
                                     />
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 pt-5">
+                            <h3 className="text-sm font-bold text-slate-900">
+                                Student Photo
+                            </h3>
+                            <p className="mt-0.5 text-xs text-slate-500">
+                                Used by the guard to verify the student at the
+                                gate after a scan.
+                            </p>
+                            <div className="mt-4">
+                                <PhotoUpload
+                                    value={data.photo}
+                                    onChange={(file) => setData('photo', file)}
+                                    error={errors.photo}
+                                />
                             </div>
                         </div>
 

@@ -18,17 +18,17 @@ class AttendanceController extends Controller
 
         $date = $request->get('date', now()->toDateString());
 
-        $query = AttendanceRecord::with(['student', 'section'])
+        $query = AttendanceRecord::with('student.section')
             ->forDate($date)
             ->when($request->section_id, fn ($q, $sectionId) => $q->forSection($sectionId))
             ->when($request->status, fn ($q, $status) => $q->where('status', $status));
 
         if ($request->user()->role === 'teacher') {
             $sectionIds = $request->user()->assignedSections()->pluck('sections.id');
-            $query->whereIn('section_id', $sectionIds);
+            $query->whereHas('student', fn ($q) => $q->whereIn('section_id', $sectionIds));
         }
 
-        $records = $query->latest('time_in')->paginate($request->get('per_page', 25));
+        $records = $query->latest('time_in')->paginate($request->get('per_page', 5));
 
         return Inertia::render('Attendance/Index', [
             'records' => $records,

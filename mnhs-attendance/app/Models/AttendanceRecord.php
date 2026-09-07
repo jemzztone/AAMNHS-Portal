@@ -16,10 +16,10 @@ class AttendanceRecord extends Model
 
     protected $fillable = [
         'student_id',
-        'section_id',
         'date',
         'status',
         'time_in',
+        'time_out',
         'source',
         'recorded_by',
         'metadata',
@@ -49,11 +49,6 @@ class AttendanceRecord extends Model
         return $this->belongsTo(Student::class);
     }
 
-    public function section()
-    {
-        return $this->belongsTo(Section::class);
-    }
-
     public function recordedBy()
     {
         return $this->belongsTo(User::class, 'recorded_by');
@@ -76,6 +71,7 @@ class AttendanceRecord extends Model
 
     public function scopeForSection($query, $sectionId)
     {
-        return $query->where('section_id', $sectionId);
+        // Section is derived from the student (3NF): attendance -> student -> section.
+        return $query->whereHas('student', fn ($q) => $q->where('section_id', $sectionId));
     }
 }

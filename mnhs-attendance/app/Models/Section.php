@@ -63,6 +63,7 @@ class Section extends Model
 
     public function teachers()
     {
-        return $this->belongsToMany(User::class, 'teacher_section_assignments', 'section_id', 'user_id');
+        return $this->belongsToMany(User::class, 'teacher_section_assignments', 'section_id', 'user_id')
+            ->whereNull('teacher_section_assignments.deleted_at');
     }
 }

@@ -39,6 +39,30 @@ class StudentPolicy
         return in_array($user->role, ['super_admin', 'admin', 'teacher']);
     }
 
+    /**
+     * Only admins and super admins can import students via CSV/XLSX.
+     */
+    public function canImportStudents(User $user): bool
+    {
+        return in_array($user->role, ['super_admin', 'admin']);
+    }
+
+    /**
+     * Teachers may only create students in their assigned sections.
+     */
+    public function canCreateInSection(User $user, ?string $sectionId): bool
+    {
+        if (in_array($user->role, ['super_admin', 'admin'])) {
+            return true;
+        }
+
+        if ($user->role === 'teacher') {
+            return $user->assignedSections()->where('sections.id', $sectionId)->exists();
+        }
+
+        return false;
+    }
+
     public function update(User $user, Student $student): bool
     {
         if (in_array($user->role, ['super_admin', 'admin'])) {

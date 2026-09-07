@@ -11,7 +11,7 @@ class AttendanceRecordController extends Controller
     {
         $this->authorize('view', $attendanceRecord);
 
-        $attendanceRecord->load(['student', 'section', 'recordedBy']);
+        $attendanceRecord->load(['student.section', 'recordedBy']);
 
         return Inertia::render('Attendance/Show', [
             'record' => $attendanceRecord,

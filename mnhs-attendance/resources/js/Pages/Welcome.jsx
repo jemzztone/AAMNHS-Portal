@@ -67,7 +67,7 @@ export default function Welcome({ auth }) {
                             <ApplicationLogo className="h-9 w-9 text-navy-800" />
                             <div className="hidden leading-tight sm:block">
                                 <p className="text-sm font-bold text-navy-950">
-                                    AAMNHS Attendance
+                                    Aurelians Portal
                                 </p>
                                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-navy-500">
                                     Attendance Monitoring System
@@ -121,7 +121,7 @@ export default function Welcome({ auth }) {
                         <div className="mx-auto max-w-3xl text-center">
                             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-navy-100 backdrop-blur">
                                 <span className="badge-dot bg-navy-300" />
-                                Republic of the Philippines · DepEd
+                                Republic of the Philippines · DepEd Oriental Mindoro Division
                             </span>
                             <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
                                 Student attendance,

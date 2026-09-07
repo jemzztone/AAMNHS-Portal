@@ -53,6 +53,50 @@ In order to ensure that the Laravel community is welcoming to all, please review
 
 If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
 
+## XLSX Import Support
+
+This system supports importing student data from XLSX files (for Admin and Teacher roles only).
+
+### Requirements
+
+- PHP 8.3+
+- PHP Extensions:
+  - `ext-zip` (required for XLSX files)
+  - `ext-xml`
+  - `ext-json`
+
+### Installation
+
+```bash
+# Install dependencies
+composer install
+
+# If XLSX import fails, ensure PHP zip extension is enabled:
+# - Windows (Herd): Automatically enabled
+# - Linux: sudo apt install php-zip && sudo systemctl restart php-fpm
+# - macOS (Herd/Homebrew): Enabled by default
+```
+
+### File Upload Limits
+
+For XLSX import to work properly, ensure your server has adequate upload limits:
+
+```ini
+# php.ini or .env
+upload_max_filesize = 10M
+post_max_size = 12M
+max_input_vars = 5000
+```
+
+### User Permissions
+
+- **Admin & Teacher**: Can import both CSV and XLSX files
+- **Student & Security Guard**: CSV files only
+
+The system enforces these permissions at both frontend (file picker) and backend (validation) levels.
+
+---
+
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).

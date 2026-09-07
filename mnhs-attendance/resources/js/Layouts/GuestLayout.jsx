@@ -1,7 +1,7 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import { Link } from '@inertiajs/react';
 
-export default function GuestLayout({ children }) {
+export default function GuestLayout({ children, wide = false }) {
     return (
         <div className="relative flex min-h-screen items-center justify-center px-4 py-12">
             {/* Background image with overlay */}
@@ -15,7 +15,7 @@ export default function GuestLayout({ children }) {
             </div>
 
             {/* Content */}
-            <div className="relative z-10 w-full max-w-sm">
+            <div className={`relative z-10 w-full ${wide ? 'max-w-lg' : 'max-w-sm'}`}>
                 {/* Back to Home */}
                 <div className="mb-4">
                     <Link

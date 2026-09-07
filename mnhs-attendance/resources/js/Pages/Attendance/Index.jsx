@@ -2,6 +2,14 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
 
+function formatTime12(time) {
+    if (!time) return '—';
+    const [h, m] = time.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    return `${hour % 12 || 12}:${m} ${ampm}`;
+}
+
 function statusBadge(status) {
     const map = {
         present: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -152,6 +160,7 @@ export default function Index({ records, sections, filters }) {
                                     <th className="th">Section</th>
                                     <th className="th">Status</th>
                                     <th className="th">Time In</th>
+                                    <th className="th">Time Out</th>
                                     <th className="th">Source</th>
                                 </tr>
                             </thead>
@@ -181,7 +190,7 @@ export default function Index({ records, sections, filters }) {
                                         </td>
                                         <td className="td">
                                             <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
-                                                {record.section?.name || '—'}
+                                                {record.student?.section?.name || '—'}
                                             </span>
                                         </td>
                                         <td className="td">
@@ -189,6 +198,9 @@ export default function Index({ records, sections, filters }) {
                                         </td>
                                         <td className="td font-mono text-slate-600">
                                             {record.time_in || '—'}
+                                        </td>
+                                        <td className="td font-mono text-slate-600">
+                                            {record.time_out || '—'}
                                         </td>
                                         <td className="td">
                                             <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs font-medium capitalize text-slate-600">

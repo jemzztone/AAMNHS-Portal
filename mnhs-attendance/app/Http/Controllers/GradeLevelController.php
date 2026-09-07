@@ -14,7 +14,7 @@ class GradeLevelController extends Controller
 
         $gradeLevels = GradeLevel::withCount('sections')
             ->orderBy('level_number')
-            ->paginate(25);
+            ->paginate(5);
 
         return Inertia::render('GradeLevels/Index', [
             'gradeLevels' => $gradeLevels,

@@ -15,7 +15,7 @@ class GuardianNotificationController extends Controller
         $query = GuardianNotification::with(['student', 'attendanceRecord'])
             ->when($request->status, fn ($q, $status) => $q->where('status', $status));
 
-        $notifications = $query->latest()->paginate($request->get('per_page', 25));
+        $notifications = $query->latest()->paginate(min(max((int) $request->get('per_page', 5), 1), 100));
 
         return Inertia::render('GuardianNotifications/Index', [
             'notifications' => $notifications,

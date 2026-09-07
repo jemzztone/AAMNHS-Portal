@@ -27,7 +27,9 @@ class AnalyticsController extends Controller
         return Inertia::render('Analytics/Index', [
             ...$report,
             'filters' => $request->only(['start_date', 'end_date', 'section_id']),
-            'sections' => Section::all(),
+            'sections' => $request->user()->role === 'teacher'
+                ? $request->user()->assignedSections()->get()
+                : Section::all(),
         ]);
     }
 }

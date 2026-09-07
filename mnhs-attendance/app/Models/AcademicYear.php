@@ -41,11 +41,6 @@ class AcademicYear extends Model
         });
     }
 
-    public function gradeLevels()
-    {
-        return $this->hasMany(GradeLevel::class);
-    }
-
     public function sections()
     {
         return $this->hasMany(Section::class);

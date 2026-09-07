@@ -1,6 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head } from '@inertiajs/react';
 
 function StatCard({ title, value, color = 'blue' }) {
     const tones = {
@@ -118,11 +117,7 @@ export default function Index({
     lateStudents,
     earlyArrivals,
     absenteeism,
-    filters,
 }) {
-    const user = usePage().props.auth.user;
-    const isAdmin = ['super_admin', 'admin'].includes(user?.role);
-
     return (
         <AuthenticatedLayout
             header={
@@ -143,10 +138,7 @@ export default function Index({
                     <StatCard title="Absent" value={stats.absent} color="red" />
                 </dl>
 
-                {/* AI Assistant (Admin only) */}
-                {isAdmin && <AiAssistant filters={filters} />}
-
-                <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2">
                     <RankList
                         title="Section Ranking"
                         subtitle="Most late occurrences"
@@ -202,138 +194,5 @@ export default function Index({
                 </div>
             </div>
         </AuthenticatedLayout>
-    );
-}
-
-function AiAssistant({ filters }) {
-    const [question, setQuestion] = useState('');
-    const [answer, setAnswer] = useState(null);
-    const [error, setError] = useState(null);
-    const [loading, setLoading] = useState(false);
-
-    const ask = async () => {
-        if (!question.trim()) {
-            setError('Please enter a question.');
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-        setAnswer(null);
-
-        try {
-            const response = await fetch(route('ai.query'), {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-XSRF-TOKEN': decodeURIComponent(
-                        document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || '',
-                    ),
-                },
-                body: JSON.stringify({
-                    question,
-                    start_date: filters?.start_date,
-                    end_date: filters?.end_date,
-                    section_id: filters?.section_id || undefined,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setAnswer(data.answer);
-            } else {
-                const message =
-                    data.errors?.question?.[0] ||
-                    data.message ||
-                    'The assistant could not answer right now.';
-                setError(message);
-            }
-        } catch (err) {
-            setError('Network error. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="card card-pad mt-8">
-            <div className="flex items-center gap-3">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy-800 text-white">
-                    <svg
-                        className="h-[18px] w-[18px]"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth="1.8"
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z"
-                        />
-                    </svg>
-                </span>
-                <div>
-                    <h3 className="surface-title">AI Assistant</h3>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                        Ask natural-language questions about the attendance
-                        dataset (e.g. "Which section was late most often this
-                        period?" or "List students with 5+ absences"). Answers
-                        use the current filter period.
-                    </p>
-                </div>
-            </div>
-
-            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <div className="relative flex-1">
-                    <svg
-                        className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth="1.8"
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                        />
-                    </svg>
-                    <input
-                        type="text"
-                        value={question}
-                        onChange={(e) => setQuestion(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && ask()}
-                        placeholder="Ask about attendance..."
-                        className="input ps-9"
-                    />
-                </div>
-                <button
-                    onClick={ask}
-                    disabled={loading}
-                    className="btn-primary shrink-0"
-                >
-                    {loading ? 'Thinking...' : 'Ask'}
-                </button>
-            </div>
-
-            {error && (
-                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-                    <p className="text-sm text-red-700">{error}</p>
-                </div>
-            )}
-
-            {answer && (
-                <div className="mt-4 rounded-xl border border-navy-100 bg-navy-50/70 px-4 py-3">
-                    <p className="whitespace-pre-wrap text-sm text-navy-900">
-                        {answer}
-                    </p>
-                </div>
-            )}
-        </div>
     );
 }

@@ -2,7 +2,6 @@
 
 namespace App\Actions\Ai;
 
-use App\Actions\Analytics\BuildAnalyticsReport;
 use App\Actions\Audit\LogAuditEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\Http;
@@ -11,10 +10,10 @@ use Illuminate\Validation\ValidationException;
 class QueryAssistant
 {
     public function handle(
-        User $admin,
+        User $user,
         string $question,
-        string $startDate,
-        string $endDate,
+        ?string $startDate,
+        ?string $endDate,
         ?string $sectionId,
         ?string $ip,
         ?string $userAgent,
@@ -33,10 +32,11 @@ class QueryAssistant
             ]);
         }
 
-        $report = (new BuildAnalyticsReport)->handle($admin, $startDate, $endDate, $sectionId);
-        $context = $this->buildContext($report, $startDate, $endDate);
+        $startDate ??= now()->startOfMonth()->toDateString();
+        $endDate ??= now()->toDateString();
 
-        $prompt = $this->systemPrompt()."\n\nSCHOOL ATTENDANCE DATA:\n".$context."\n\nQUESTION: ".$question;
+        $context = (new BuildAiContext)->handle($user, $startDate, $endDate, $sectionId);
+        $prompt = $this->systemPrompt($user)."\n\nSCHOOL DATA:\n".$context."\n\nQUESTION: ".$question;
 
         $answer = match ($provider) {
             'gemini' => $this->callGemini($apiKey, $prompt),
@@ -49,7 +49,7 @@ class QueryAssistant
         (new LogAuditEvent)->handle(
             event: 'ai.query',
             auditable: null,
-            actor: $admin,
+            actor: $user,
             newValues: [
                 'question' => $question,
                 'answer' => $answer,
@@ -152,51 +152,45 @@ class QueryAssistant
         };
     }
 
-    private function systemPrompt(): string
+    private function systemPrompt(User $user): string
     {
-        return <<<'PROMPT'
-You are the analytics assistant for Aurelio Arago MNHS, a Philippine high school.
-You answer questions about student attendance data. You are given a JSON snapshot
-of the school's attendance analytics (totals, section late rankings, frequently
-late students, earliest arrivals, top absentees).
-Answer the user's question in clear, concise English, based ONLY on the provided
-data. If the data does not contain the answer, say so plainly. Do not invent
-numbers. Keep answers under 250 words.
-PROMPT;
-    }
+        $role = $user->role;
 
-    /**
-     * @param  array<string, mixed>  $report
-     */
-    private function buildContext(array $report, string $startDate, string $endDate): string
-    {
-        return json_encode([
-            'period' => "{$startDate} to {$endDate}",
-            'stats' => $report['stats'],
-            'section_ranking_by_lates' => $report['sectionRanking']
-                ->map(fn ($item) => [
-                    'section' => $item->section?->name,
-                    'late_count' => $item->late_count,
-                ])
-                ->values(),
-            'most_frequently_late_students' => $report['lateStudents']
-                ->map(fn ($student) => [
-                    'name' => $student->full_name,
-                    'late_count' => $student->late_count,
-                ])
-                ->values(),
-            'earliest_arrivals' => $report['earlyArrivals']
-                ->map(fn ($student) => [
-                    'name' => $student->full_name,
-                    'earliest_time' => $student->earliest_time,
-                ])
-                ->values(),
-            'top_absent_students' => $report['absenteeism']
-                ->map(fn ($student) => [
-                    'name' => $student->full_name,
-                    'absent_count' => $student->absent_count,
-                ])
-                ->values(),
-        ], JSON_PRETTY_PRINT);
+        $base = <<<'PROMPT'
+You are the AI assistant for Aurelio Arago MNHS, a Philippine high school.
+You can answer ANY question about the school data provided to you, including
+students, teachers, sections, attendance, grade levels, and audit logs.
+
+RULES:
+- Answer based ONLY on the provided data. Do not invent numbers or names.
+- Be concise and direct. Keep answers under 300 words unless the user asks for detail.
+- Use bullet points or tables for lists. Use numbers for rankings.
+- If the data does not contain enough information to answer, say so clearly.
+- You may reference specific student names, LRN, section names, teacher names, etc.
+- When comparing data, use percentages or ratios when helpful.
+- Respond in clear, professional English.
+PROMPT;
+
+        $roleAccess = match ($role) {
+            'super_admin' => <<<'ROLE'
+ACCESS LEVEL: Super Admin — full access to all data including user accounts and audit logs.
+You can answer questions about any student, teacher, section, attendance record, user account,
+or system audit log in the entire school.
+ROLE,
+            'admin' => <<<'ROLE'
+ACCESS LEVEL: Admin — access to all student, teacher, section, and attendance data.
+You cannot see super_admin user accounts or audit log details.
+ROLE,
+            'teacher' => <<<'ROLE'
+ACCESS LEVEL: Teacher — access is limited to your assigned sections only.
+You can only see students, teachers, and attendance data for sections assigned to you.
+Do not provide data about sections you do not have access to.
+ROLE,
+            default => <<<'ROLE'
+ACCESS LEVEL: Limited — you can only see your own data.
+ROLE,
+        };
+
+        return $base."\n\n".$roleAccess;
     }
 }
