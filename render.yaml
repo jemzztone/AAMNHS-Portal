@@ -48,11 +48,6 @@ services:
           type: redis
           name: aamnhs-redis
           property: host
-      - key: REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: aamnhs-redis
-          property: password
       - key: REDIS_PORT
         value: "6379"
       - key: REDIS_TLS
