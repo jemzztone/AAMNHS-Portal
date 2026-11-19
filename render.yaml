@@ -4,7 +4,6 @@ services:
     runtime: docker
     dockerfilePath: mnhs-attendance/Dockerfile
     dockerContext: mnhs-attendance
-    port: 8080
     envVars:
       - key: APP_ENV
         value: production
@@ -17,15 +16,23 @@ services:
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        sync: false
+        fromDatabase:
+          name: aamnhs-db
+          property: host
       - key: DB_PORT
         value: "5432"
       - key: DB_DATABASE
-        sync: false
+        fromDatabase:
+          name: aamnhs-db
+          property: database
       - key: DB_USERNAME
-        sync: false
+        fromDatabase:
+          name: aamnhs-db
+          property: user
       - key: DB_PASSWORD
-        sync: false
+        fromDatabase:
+          name: aamnhs-db
+          property: password
       - key: DB_SSLMODE
         value: require
       - key: SESSION_DRIVER
@@ -37,13 +44,21 @@ services:
       - key: QUEUE_CONNECTION
         value: redis
       - key: REDIS_HOST
-        sync: false
+        fromService:
+          type: redis
+          name: aamnhs-redis
+          property: host
       - key: REDIS_PASSWORD
-        sync: false
+        fromService:
+          type: redis
+          name: aamnhs-redis
+          property: password
       - key: REDIS_PORT
         value: "6379"
       - key: REDIS_TLS
         value: "true"
+      - key: REDIS_CLIENT
+        value: phpredis
       - key: FILESYSTEM_DISK
         value: supabase
       - key: SUPABASE_STORAGE_KEY
@@ -80,8 +95,6 @@ services:
         sync: false
       - key: QUEUE_WORKER_SECRET
         sync: false
-      - key: REDIS_CLIENT
-        value: phpredis
       - key: AI_PROVIDER
         value: gemini
       - key: GEMINI_MODEL
@@ -98,7 +111,8 @@ databases:
     plan: free
     region: singapore
 
-redis:
-  - name: aamnhs-redis
+services:
+  - type: redis
+    name: aamnhs-redis
     plan: free
     region: singapore
