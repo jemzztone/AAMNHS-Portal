@@ -28,7 +28,7 @@ RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interactio
 
 # Copy package files
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps --force
+RUN npm ci --legacy-peer-deps
 
 # Copy application
 COPY . .
