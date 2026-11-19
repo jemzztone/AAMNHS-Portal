@@ -11,4 +11,11 @@ export default defineConfig({
         }),
         react(),
     ],
+    build: {
+        rollupOptions: {
+            input: {
+                main: 'resources/js/app.jsx',
+            },
+        },
+    },
 });
