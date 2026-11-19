@@ -1,0 +1,104 @@
+services:
+  - type: web
+    name: aamnhs-attendance
+    runtime: docker
+    dockerfilePath: mnhs-attendance/Dockerfile
+    dockerContext: mnhs-attendance
+    port: 8080
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        value: base64:wTCPi8emvTlti6/SP3+6bjeSe8UjNLGMIuSLaK2xg94=
+      - key: APP_URL
+        value: https://aamnhs-attendance.onrender.com
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_DATABASE
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
+      - key: SESSION_DRIVER
+        value: redis
+      - key: SESSION_ENCRYPT
+        value: "true"
+      - key: CACHE_STORE
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: redis
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PASSWORD
+        sync: false
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_TLS
+        value: "true"
+      - key: FILESYSTEM_DISK
+        value: supabase
+      - key: SUPABASE_STORAGE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_SECRET
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: aamnhs-files
+      - key: SUPABASE_STORAGE_URL
+        sync: false
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: "587"
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: MAIL_FROM_NAME
+        value: "AAMNHS Attendance"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://aamnhs-attendance.onrender.com/auth/google/callback
+      - key: GOOGLE_API_KEY
+        sync: false
+      - key: QUEUE_WORKER_SECRET
+        sync: false
+      - key: REDIS_CLIENT
+        value: phpredis
+      - key: AI_PROVIDER
+        value: gemini
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: AI_MAX_TOKENS
+        value: "1024"
+      - key: AI_TIMEOUT_SECONDS
+        value: "60"
+
+databases:
+  - name: aamnhs-db
+    databaseName: aamnhs_attendance
+    user: aamnhs_user
+    plan: free
+    region: singapore
+
+redis:
+  - name: aamnhs-redis
+    plan: free
+    region: singapore
