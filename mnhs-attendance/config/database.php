@@ -61,6 +61,9 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                Mysql::ATTR_SSL_VERIFY_SERVER_CERT => env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', true),
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT => env('MYSQL_ATTR_SSL_VERIFY_SERVER_CERT', true),
             ]) : [],
         ],
 
@@ -96,7 +99,7 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
+            'sslmode' => env('DB_SSLMODE', 'require'),
         ],
 
         'sqlsrv' => [
@@ -151,6 +154,7 @@ return [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
             'prefix' => env('REDIS_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-database-'),
             'persistent' => env('REDIS_PERSISTENT', false),
+            'ssl' => filter_var(env('REDIS_TLS', false), FILTER_VALIDATE_BOOLEAN),
         ],
 
         'default' => [

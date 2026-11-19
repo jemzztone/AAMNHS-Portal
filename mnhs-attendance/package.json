@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build && vite build --ssr",
-        "dev": "vite"
+        "build:vercel": "npm run build",
+        "dev": "vite",
+        "dev:vercel": "composer run dev"
     },
     "devDependencies": {
         "@headlessui/react": "^2.0.0",

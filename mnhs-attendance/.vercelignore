@@ -1,0 +1,64 @@
+# Dependencies
+node_modules
+vendor
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+storage/logs/*
+
+# Cache
+bootstrap/cache/*
+!bootstrap/cache/.gitkeep
+
+# Testing
+phpunit.xml
+phpunit.xml.dist
+tests/
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+database/*.sqlite
+database/*.sqlite-journal
+
+# Storage (except framework directories)
+storage/app/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/framework/testing/*
+
+# Public storage (will be recreated)
+public/storage
+
+# Build artifacts
+public/build
+public/hot
+
+# Vercel
+.vercel
+vercel.json
+
+# Documentation
+*.md
+!README.md
+
+# Misc
+*.backup
+*.bak
+Thumbs.db
+.DS_Store

@@ -23,6 +23,8 @@ return Application::configure(basePath: dirname(__DIR__))
             AddLinkHeadersForPreloadedAssets::class,
         ]);
 
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => EnsureUserHasRole::class,
             'active' => EnsureUserIsActive::class,
