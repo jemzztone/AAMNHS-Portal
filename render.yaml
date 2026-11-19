@@ -110,6 +110,7 @@ services:
     name: aamnhs-redis
     plan: free
     region: singapore
+    ipAllowList: []
 
 databases:
   - name: aamnhs-db
