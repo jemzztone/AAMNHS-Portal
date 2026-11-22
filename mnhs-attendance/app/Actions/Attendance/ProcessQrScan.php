@@ -8,6 +8,7 @@ use App\Jobs\SendGuardianNotification;
 use App\Models\AdmissionSlip;
 use App\Models\AttendanceRecord;
 use App\Models\GuardianNotification;
+use App\Models\NotificationSetting;
 use App\Models\Student;
 
 class ProcessQrScan
@@ -218,6 +219,29 @@ class ProcessQrScan
         }
 
         $action = $status === 'time_out' ? 'time_out' : 'time_in';
+
+        // Admins choose which attendance events reach guardians; the defaults
+        // keep the previous behaviour (both arrival and departure notices).
+        $settings = NotificationSetting::current();
+
+        if ($action === 'time_in' && ! $settings->notify_on_time_in) {
+            return;
+        }
+
+        if ($action === 'time_out' && ! $settings->notify_on_time_out) {
+            return;
+        }
+
+        if ($settings->notify_on_late_only) {
+            if ($action === 'time_out') {
+                return;
+            }
+
+            if ($record->status !== 'late') {
+                return;
+            }
+        }
+
         $date = now()->format('F j, Y');
         $time = now()->format('h:i A');
 

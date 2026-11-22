@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GradeLevelController;
 use App\Http\Controllers\GuardianNotificationController;
 use App\Http\Controllers\GuardScheduleController;
+use App\Http\Controllers\NotificationSettingController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QRScanController;
 use App\Http\Controllers\SectionController;
@@ -116,6 +117,12 @@ Route::middleware(['auth', 'verified', 'active', 'force-password-change'])->grou
     Route::middleware('role:super_admin,admin')->group(function () {
         Route::get('/guardian-notifications', [GuardianNotificationController::class, 'index'])->name('guardian-notifications.index');
         Route::get('/guardian-notifications/{guardianNotification}', [GuardianNotificationController::class, 'show'])->name('guardian-notifications.show');
+    });
+
+    // Notification preferences (admin only)
+    Route::middleware('role:super_admin,admin')->group(function () {
+        Route::get('/notification-settings', [NotificationSettingController::class, 'edit'])->name('notification-settings.edit');
+        Route::put('/notification-settings', [NotificationSettingController::class, 'update'])->name('notification-settings.update');
     });
 
     // User Management (super_admin + admin)
