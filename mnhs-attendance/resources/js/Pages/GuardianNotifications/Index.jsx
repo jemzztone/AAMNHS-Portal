@@ -8,6 +8,7 @@ function statusBadge(status) {
         pending: 'bg-amber-50 text-amber-700 ring-amber-600/20',
         sent: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
         failed: 'bg-red-50 text-red-700 ring-red-600/20',
+        skipped: 'bg-slate-100 text-slate-700 ring-slate-600/20',
     };
     return (
         <span className={`badge ring-1 ring-inset ${map[status] || 'bg-slate-100 text-slate-700 ring-slate-600/20'}`}>
@@ -22,6 +23,7 @@ function SummaryCard({ label, value, tone, onClick, active }) {
         pending: 'text-amber-700',
         sent: 'text-emerald-700',
         failed: 'text-red-700',
+        skipped: 'text-slate-600',
         total: 'text-slate-900',
     };
 
@@ -74,10 +76,11 @@ export default function Index({ notifications, filters, stats, mail }) {
                     </div>
                 )}
 
-                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-5">
                     <SummaryCard label="Pending" value={stats.pending} tone="pending" active={status === 'pending'} onClick={() => selectStatus('pending')} />
                     <SummaryCard label="Sent" value={stats.sent} tone="sent" active={status === 'sent'} onClick={() => selectStatus('sent')} />
                     <SummaryCard label="Failed" value={stats.failed} tone="failed" active={status === 'failed'} onClick={() => selectStatus('failed')} />
+                    <SummaryCard label="Skipped" value={stats.skipped} tone="skipped" active={status === 'skipped'} onClick={() => selectStatus('skipped')} />
                     <SummaryCard label="Total" value={stats.total} tone="total" active={status === ''} onClick={() => selectStatus('')} />
                 </div>
 
@@ -97,6 +100,7 @@ export default function Index({ notifications, filters, stats, mail }) {
                                 <option value="pending">Pending</option>
                                 <option value="sent">Sent</option>
                                 <option value="failed">Failed</option>
+                                <option value="skipped">Skipped</option>
                             </select>
                         </div>
                         <button onClick={handleFilter} className="btn-primary">
@@ -128,8 +132,11 @@ export default function Index({ notifications, filters, stats, mail }) {
                                         <td className="td max-w-xs truncate text-slate-600">{n.subject}</td>
                                         <td className="td">
                             {statusBadge(n.status)}
-                            {n.status === 'failed' && n.failure_reason && (
-                                <p className="mt-1 max-w-[16rem] truncate text-xs text-red-600" title={n.failure_reason}>
+                            {(n.status === 'failed' || n.status === 'skipped') && n.failure_reason && (
+                                <p
+                                    className={`mt-1 max-w-[16rem] truncate text-xs ${n.status === 'skipped' ? 'text-slate-500' : 'text-red-600'}`}
+                                    title={n.failure_reason}
+                                >
                                     {n.failure_reason}
                                 </p>
                             )}

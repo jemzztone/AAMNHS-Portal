@@ -224,22 +224,16 @@ class ProcessQrScan
         // keep the previous behaviour (both arrival and departure notices).
         $settings = NotificationSetting::current();
 
+        $skippedReason = null;
+
         if ($action === 'time_in' && ! $settings->notify_on_time_in) {
-            return;
-        }
-
-        if ($action === 'time_out' && ! $settings->notify_on_time_out) {
-            return;
-        }
-
-        if ($settings->notify_on_late_only) {
-            if ($action === 'time_out') {
-                return;
-            }
-
-            if ($record->status !== 'late') {
-                return;
-            }
+            $skippedReason = 'Arrival emails are turned off in notification preferences.';
+        } elseif ($action === 'time_out' && ! $settings->notify_on_time_out) {
+            $skippedReason = 'Departure emails are turned off in notification preferences.';
+        } elseif ($settings->notify_on_late_only) {
+            $skippedReason = $action === 'time_out'
+                ? 'Only late arrivals are emailed, so departure emails are skipped.'
+                : ($record->status !== 'late' ? 'Only late arrivals are emailed and this student arrived on time.' : null);
         }
 
         $date = now()->format('F j, Y');
@@ -250,6 +244,22 @@ class ProcessQrScan
             : "Attendance Notification — {$student->full_name} has left the school premises";
 
         $body = "Your child {$student->full_name} has ".($action === 'time_in' ? 'arrived at school' : 'left the school premises')." at {$time} on {$date}.";
+
+        // A suppressed notice still gets a row so admins can see that the scan
+        // happened and why no email went out to the guardian.
+        if ($skippedReason !== null) {
+            GuardianNotification::create([
+                'student_id' => $student->id,
+                'attendance_record_id' => $record->id,
+                'guardian_email' => $student->guardian_email,
+                'subject' => $subject,
+                'body' => $body,
+                'status' => 'skipped',
+                'failure_reason' => $skippedReason,
+            ]);
+
+            return;
+        }
 
         GuardianNotification::create([
             'student_id' => $student->id,

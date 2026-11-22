@@ -32,6 +32,7 @@ class GuardianNotificationController extends Controller
                 'pending' => (int) ($counts['pending'] ?? 0),
                 'sent' => (int) ($counts['sent'] ?? 0),
                 'failed' => (int) ($counts['failed'] ?? 0),
+                'skipped' => (int) ($counts['skipped'] ?? 0),
                 'total' => (int) $counts->sum(),
             ],
             'mail' => [

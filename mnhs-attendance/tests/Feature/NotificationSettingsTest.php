@@ -120,7 +120,34 @@ class NotificationSettingsTest extends TestCase
 
         (new ProcessQrScan)->handle($student->qr_token, null, '127.0.0.1', 'phpunit');
 
-        $this->assertDatabaseCount('guardian_notifications', 0);
+        $this->assertDatabaseHas('guardian_notifications', [
+            'student_id' => $student->id,
+            'guardian_email' => 'guardian@example.com',
+            'status' => 'skipped',
+            'failure_reason' => 'Arrival emails are turned off in notification preferences.',
+        ]);
+        Queue::assertNothingPushed();
+    }
+
+    public function test_departure_notifications_can_be_disabled(): void
+    {
+        Queue::fake();
+
+        NotificationSetting::current()->update(['notify_on_time_out' => false]);
+
+        $student = $this->makeStudent();
+        $scanner = new ProcessQrScan;
+
+        $scanner->handle($student->qr_token, null, '127.0.0.1', 'phpunit');
+        Queue::fake();
+
+        $scanner->handle($student->qr_token, null, '127.0.0.1', 'phpunit');
+
+        $this->assertDatabaseHas('guardian_notifications', [
+            'student_id' => $student->id,
+            'status' => 'skipped',
+            'failure_reason' => 'Departure emails are turned off in notification preferences.',
+        ]);
         Queue::assertNothingPushed();
     }
 
@@ -134,7 +161,11 @@ class NotificationSettingsTest extends TestCase
 
         (new ProcessQrScan)->handle($student->qr_token, null, '127.0.0.1', 'phpunit');
 
-        $this->assertDatabaseCount('guardian_notifications', 0);
+        $this->assertDatabaseHas('guardian_notifications', [
+            'student_id' => $student->id,
+            'status' => 'skipped',
+            'failure_reason' => 'Only late arrivals are emailed and this student arrived on time.',
+        ]);
         Queue::assertNothingPushed();
     }
 

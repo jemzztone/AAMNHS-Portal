@@ -61,9 +61,15 @@ export default function Show({ notification }) {
                         {notification.failure_reason && (
                             <div className="sm:col-span-2">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                                    Failure Reason
+                                    {notification.status === 'skipped' ? 'Not sent because' : 'Failure Reason'}
                                 </p>
-                                <p className="mt-1 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800 ring-1 ring-inset ring-red-100">
+                                <p
+                                    className={`mt-1 rounded-xl px-4 py-3 text-sm ring-1 ring-inset ${
+                                        notification.status === 'skipped'
+                                            ? 'bg-slate-50 text-slate-700 ring-slate-100'
+                                            : 'bg-red-50 text-red-800 ring-red-100'
+                                    }`}
+                                >
                                     {notification.failure_reason}
                                 </p>
                             </div>
