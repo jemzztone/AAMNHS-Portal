@@ -21,6 +21,7 @@ class AttendanceRecord extends Model
         'time_in',
         'time_out',
         'source',
+        'client_reference',
         'recorded_by',
         'metadata',
     ];

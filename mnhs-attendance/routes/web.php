@@ -13,6 +13,7 @@ use App\Http\Controllers\GradeLevelController;
 use App\Http\Controllers\GuardianNotificationController;
 use App\Http\Controllers\GuardScheduleController;
 use App\Http\Controllers\NotificationSettingController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QRScanController;
 use App\Http\Controllers\SectionController;
@@ -58,6 +59,11 @@ Route::get('/health', function () {
 
 Route::middleware(['auth', 'verified', 'active', 'force-password-change'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Web Push (PWA notifications)
+    Route::get('/push/public-key', [PushSubscriptionController::class, 'publicKey'])->name('push.public-key');
+    Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
+    Route::delete('/push/unsubscribe', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -156,8 +162,13 @@ Route::middleware(['auth', 'verified', 'active', 'force-password-change'])->grou
         Route::post('/guard/scan', [QRScanController::class, 'scan'])
             ->middleware('throttle:60,1')
             ->name('guard.scan.store');
+        // Replays scans queued in IndexedDB while the device was offline.
+        Route::post('/guard/scan/sync', [QRScanController::class, 'sync'])
+            ->middleware('throttle:30,1')
+            ->name('guard.scan.sync');
         Route::delete('/guard/scan/{attendanceRecord}', [QRScanController::class, 'destroy'])
             ->name('guard.scan.destroy');
+        Route::get('/guard/offline-scans', [QRScanController::class, 'offlineScans'])->name('guard.offline-scans');
         Route::get('/guard/recent', [QRScanController::class, 'recent'])->name('guard.recent');
         Route::get('/guard/schedule', [GuardScheduleController::class, 'show'])->name('guard.schedule.show');
         Route::post('/guard/schedule', [GuardScheduleController::class, 'store'])->name('guard.schedule.store');

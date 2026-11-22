@@ -126,7 +126,9 @@ class NotificationSettingsTest extends TestCase
             'status' => 'skipped',
             'failure_reason' => 'Arrival emails are turned off in notification preferences.',
         ]);
-        Queue::assertNothingPushed();
+        // The student still receives a Web Push, but no guardian email job is
+        // queued when the notice is suppressed.
+        Queue::assertNotPushed(SendGuardianNotification::class);
     }
 
     public function test_departure_notifications_can_be_disabled(): void
@@ -148,7 +150,9 @@ class NotificationSettingsTest extends TestCase
             'status' => 'skipped',
             'failure_reason' => 'Departure emails are turned off in notification preferences.',
         ]);
-        Queue::assertNothingPushed();
+        // The student still receives a Web Push, but no guardian email job is
+        // queued when the notice is suppressed.
+        Queue::assertNotPushed(SendGuardianNotification::class);
     }
 
     public function test_late_only_skips_on_time_arrivals(): void
@@ -166,7 +170,9 @@ class NotificationSettingsTest extends TestCase
             'status' => 'skipped',
             'failure_reason' => 'Only late arrivals are emailed and this student arrived on time.',
         ]);
-        Queue::assertNothingPushed();
+        // The student still receives a Web Push, but no guardian email job is
+        // queued when the notice is suppressed.
+        Queue::assertNotPushed(SendGuardianNotification::class);
     }
 
     public function test_late_only_still_notifies_for_late_students(): void

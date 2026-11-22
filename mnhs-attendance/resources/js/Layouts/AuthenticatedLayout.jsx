@@ -1,5 +1,6 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
+import PushNotifications from '@/Components/PushNotifications';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
@@ -254,6 +255,17 @@ const NAV_GROUPS = [
                     />
                 ),
             },
+            {
+                name: 'Offline Scans',
+                href: 'guard.offline-scans',
+                icon: (
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 16.5v-9m0 0L8.25 11.25M12 7.5l3.75 3.75M4.5 19.5h15"
+                    />
+                ),
+            },
         ],
     },
 ];
@@ -442,6 +454,8 @@ export default function AuthenticatedLayout({ header, children }) {
                         <span className="text-sm font-bold text-navy-900">AAMNHS</span>
                     </Link>
                 </header>
+
+                <PushNotifications />
 
                 {/* Page header */}
                 {header && (

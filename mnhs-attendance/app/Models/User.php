@@ -45,6 +45,11 @@ class User extends Authenticatable
         return $this->hasOne(Student::class);
     }
 
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(PushSubscription::class);
+    }
+
     public function teacherAssignments()
     {
         return $this->hasMany(TeacherSectionAssignment::class);

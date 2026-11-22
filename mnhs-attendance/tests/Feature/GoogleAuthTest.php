@@ -81,20 +81,48 @@ class GoogleAuthTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
-    public function test_callback_signs_in_user_with_force_password_change(): void
+    public function test_callback_rejects_non_student_roles(): void
+    {
+        $this->configureGoogle();
+
+        // Google sign-in is reserved for students: staff accounts must use the
+        // email/password form so privileged access stays under school control.
+        foreach (['teacher', 'security_guard', 'admin', 'super_admin'] as $role) {
+            $user = User::factory()->create([
+                'email' => "{$role}@mnhs.edu",
+                'role' => $role,
+            ]);
+
+            Http::fake([
+                'oauth2.googleapis.com/token' => Http::response(['access_token' => 'fake-token']),
+                'googleapis.com/oauth2/v3/userinfo' => Http::response([
+                    'email' => "{$role}@mnhs.edu",
+                    'name' => ucfirst($role),
+                ]),
+            ]);
+
+            $this->callbackWithState()
+                ->assertRedirect(route('login'))
+                ->assertSessionHas('status');
+
+            $this->assertGuest();
+        }
+    }
+
+    public function test_callback_signs_in_student_with_forced_password_change(): void
     {
         $this->configureGoogle();
 
         $user = User::factory()->create([
-            'email' => 'teacher@mnhs.edu',
-            'role' => 'teacher',
+            'email' => 'student2@mnhs.edu',
+            'role' => 'student',
             'force_password_change' => true,
         ]);
 
         Http::fake([
             'oauth2.googleapis.com/token' => Http::response(['access_token' => 'fake-token']),
             'googleapis.com/oauth2/v3/userinfo' => Http::response([
-                'email' => 'teacher@mnhs.edu',
+                'email' => 'student2@mnhs.edu',
                 'name' => 'Maria Santos',
             ]),
         ]);
@@ -103,8 +131,6 @@ class GoogleAuthTest extends TestCase
             ->assertRedirect(route('dashboard', absolute: false));
 
         $this->assertAuthenticatedAs($user);
-        // force_password_change is no longer used - direct login after Google auth
-        $this->assertTrue($user->fresh()->force_password_change);
     }
 
     public function test_callback_sends_unknown_email_to_registration(): void

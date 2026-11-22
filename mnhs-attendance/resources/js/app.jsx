@@ -1,5 +1,6 @@
 import '../css/app.css';
 import './bootstrap';
+import { initOfflineSync } from './offline/sync';
 
 import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
@@ -21,6 +22,21 @@ createInertiaApp({
         }
 
         createRoot(el).render(<App {...props} />);
+
+        // Progressive Web App: cache the shell, replay offline scans and keep
+        // the push subscription alive across visits.
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker
+                .register('/sw.js')
+                .then((registration) => {
+                    if ('sync' in registration) {
+                        registration.sync.register('sync-scans').catch(() => {});
+                    }
+                })
+                .catch(() => {});
+        }
+
+        initOfflineSync();
     },
     progress: {
         color: '#4B5563',

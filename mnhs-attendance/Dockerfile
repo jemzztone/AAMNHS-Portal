@@ -12,7 +12,9 @@ RUN apk add --no-cache \
     zip \
     unzip \
     postgresql-dev \
-    && docker-php-ext-install pdo_pgsql zip gd pcntl opcache \
+    oniguruma-dev \
+    curl-dev \
+    && docker-php-ext-install pdo_pgsql zip gd pcntl opcache mbstring curl \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \

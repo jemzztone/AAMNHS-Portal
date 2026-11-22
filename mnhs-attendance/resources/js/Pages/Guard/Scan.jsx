@@ -1,5 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import QrScanner from '@/Components/QrScanner';
+import { countQueuedScans, enqueueScan } from '@/offline/db';
+import { flushScanQueue } from '@/offline/sync';
 import { Head, router } from '@inertiajs/react';
 import { useMemo, useState, useEffect } from 'react';
 
@@ -67,6 +69,9 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
     const [qrToken, setQrToken] = useState('');
     const [result, setResult] = useState(null);
     const [error, setError] = useState(null);
+    const [isOnline, setIsOnline] = useState(true);
+    const [pendingSync, setPendingSync] = useState(0);
+    const [syncing, setSyncing] = useState(false);
     const [loading, setLoading] = useState(false);
     const [scanMode, setScanMode] = useState('auto');
     const [now, setNow] = useState(new Date());
@@ -95,6 +100,28 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(timer);
+    }, []);
+
+    // Keep the offline queue indicator in sync with the actual IndexedDB queue.
+    useEffect(() => {
+        const refresh = () => countQueuedScans().then(setPendingSync).catch(() => {});
+        const goOnline = () => setIsOnline(true);
+        const goOffline = () => setIsOnline(false);
+
+        setIsOnline(navigator.onLine);
+        refresh();
+
+        window.addEventListener('online', goOnline);
+        window.addEventListener('offline', goOffline);
+        window.addEventListener('aamnhs:scans-synced', refresh);
+        const timer = setInterval(refresh, 15000);
+
+        return () => {
+            window.removeEventListener('online', goOnline);
+            window.removeEventListener('offline', goOffline);
+            window.removeEventListener('aamnhs:scans-synced', refresh);
+            clearInterval(timer);
+        };
     }, []);
 
     useEffect(() => {
@@ -205,17 +232,47 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
         }
     };
 
+    /**
+     * Save a scan locally when the server cannot be reached. It is replayed by
+     * the background sync once the connection is back.
+     */
+    const queueOfflineScan = async (payload) => {
+        const clientId =
+            typeof crypto !== 'undefined' && crypto.randomUUID
+                ? crypto.randomUUID()
+                : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+        await enqueueScan({
+            client_id: clientId,
+            ...payload,
+            scanned_at: new Date().toISOString(),
+        });
+
+        setQrToken('');
+        playBeep();
+        setResult({
+            success: true,
+            offline: true,
+            message: 'Saved offline. This scan will be sent automatically when the internet returns.',
+        });
+        setPendingSync((count) => count + 1);
+    };
+
     const submitScan = async ({ qr_token, lrn }) => {
         setLoading(true);
         setError(null);
         setResult(null);
 
+        const payload = { qr_token, lrn, mode: scanMode };
+
+        if (!navigator.onLine) {
+            await queueOfflineScan(payload);
+            setLoading(false);
+            return;
+        }
+
         try {
-            const { response, data } = await apiPost(route('guard.scan.store'), {
-                qr_token,
-                lrn,
-                mode: scanMode,
-            });
+            const { response, data } = await apiPost(route('guard.scan.store'), payload);
 
             if (response.ok) {
                 setResult(data);
@@ -227,7 +284,7 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                 if (data.student) setResult(data);
             }
         } catch {
-            setError('Network error. Please try again.');
+            await queueOfflineScan(payload);
         } finally {
             setLoading(false);
         }
@@ -330,6 +387,33 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
             <Head title="Guard Scanner" />
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                {(!isOnline || pendingSync > 0) && (
+                    <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                        <span className="font-semibold">
+                            {isOnline ? 'Pending sync' : 'Offline mode'}
+                        </span>
+                        <span className="flex-1">
+                            {pendingSync} scan{pendingSync === 1 ? '' : 's'} saved on this device
+                            {isOnline
+                                ? '.'
+                                : ' — they will upload automatically once the connection returns.'}
+                        </span>
+                        <button
+                            type="button"
+                            disabled={!isOnline || syncing || pendingSync === 0}
+                            onClick={async () => {
+                                setSyncing(true);
+                                await flushScanQueue();
+                                setPendingSync(await countQueuedScans().catch(() => 0));
+                                setSyncing(false);
+                            }}
+                            className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                        >
+                            {syncing ? 'Syncing…' : 'Sync now'}
+                        </button>
+                    </div>
+                )}
+
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
                     {/* Scanner + Schedule */}
                     <div className="space-y-6 lg:col-span-3">

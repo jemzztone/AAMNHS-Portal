@@ -22,6 +22,15 @@ class QRScanController extends Controller
         ]);
     }
 
+    /**
+     * Full page view of the scans still queued in this device's IndexedDB.
+     * The list itself is read client-side; the server only renders the shell.
+     */
+    public function offlineScans()
+    {
+        return Inertia::render('Guard/OfflineScans');
+    }
+
     public function recent()
     {
         return response()->json($this->getRecentAttendance());
@@ -58,6 +67,67 @@ class QRScanController extends Controller
             'student' => $record->student->load('section.gradeLevel'),
             'record' => $record,
         ]);
+    }
+
+    /**
+     * Replay scans that the guard recorded while the device was offline.
+     *
+     * Each queued scan carries a client-generated id; a replay of a scan that
+     * already reached the server is acknowledged instead of recorded twice.
+     */
+    public function sync(Request $request)
+    {
+        if ($request->user()?->role !== 'security_guard') {
+            abort(403);
+        }
+
+        $data = $request->validate([
+            'scans' => 'required|array|max:200',
+            'scans.*.client_id' => 'required|string|max:64',
+            'scans.*.qr_token' => 'nullable|string|max:255',
+            'scans.*.lrn' => 'nullable|string|max:20',
+            'scans.*.mode' => 'nullable|string|in:auto,time_in,time_out',
+            'scans.*.scanned_at' => 'nullable|date',
+        ]);
+
+        $scheduledTime = $this->getScheduledTime();
+        $results = [];
+
+        foreach ($data['scans'] as $scan) {
+            try {
+                $result = (new ProcessQrScan)->handle(
+                    $scan['qr_token'] ?? null,
+                    $scan['lrn'] ?? null,
+                    $request->ip(),
+                    $request->userAgent(),
+                    $scheduledTime,
+                    $scan['mode'] ?? 'auto',
+                    $scan['client_id'],
+                    $scan['scanned_at'] ?? null,
+                );
+
+                $record = $result['record'];
+
+                $results[] = [
+                    'client_id' => $scan['client_id'],
+                    'success' => true,
+                    'duplicate' => $result['duplicate'] ?? false,
+                    'action' => $result['action'],
+                    'message' => $result['action'] === 'time_in'
+                        ? "Student {$record->status}. Time in recorded at {$record->time_in}."
+                        : "Student checked out. Time out recorded at {$record->time_out}.",
+                ];
+            } catch (QrScanDeniedException $e) {
+                $results[] = [
+                    'client_id' => $scan['client_id'],
+                    'success' => false,
+                    'reason' => $e->reason,
+                    'message' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return response()->json(['results' => $results]);
     }
 
     /**

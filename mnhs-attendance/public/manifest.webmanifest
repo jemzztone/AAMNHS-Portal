@@ -1,0 +1,25 @@
+{
+    "name": "AAMNHS Attendance Management",
+    "short_name": "AAMNHS",
+    "description": "Attendance management system for AAMNHS — works offline at the gate.",
+    "start_url": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#0B1F3A",
+    "theme_color": "#0B1F3A",
+    "icons": [
+        {
+            "src": "/images/AAMNHS_LOGO.png",
+            "sizes": "any",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/images/AAMNHS_LOGO.png",
+            "sizes": "any",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

@@ -5,7 +5,7 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { useState } from 'react';
-import { Head, useForm } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 
 /**
  * Shared password card used by both the login flow (guests) and the
@@ -110,6 +110,17 @@ export function PasswordForm({ mode = 'login', email = '', status }) {
                     </div>
 
                     <InputError message={errors.password} className="mt-2" />
+
+                    {isLogin && (
+                        <div className="mt-2 flex justify-end">
+                            <Link
+                                href={route('password.request')}
+                                className="text-xs font-semibold text-navy-700 hover:text-navy-900 hover:underline"
+                            >
+                                Forgot your password?
+                            </Link>
+                        </div>
+                    )}
                 </div>
 
                 <div className="mt-6">
@@ -132,6 +143,9 @@ export function PasswordForm({ mode = 'login', email = '', status }) {
 
                     <div className="mt-6">
                         <GoogleSignInButton />
+                        <p className="mt-2 text-center text-xs text-slate-500">
+                            Student accounts only. Staff and guardians must log in with email and password.
+                        </p>
                     </div>
                 </div>
             )}

@@ -5,16 +5,46 @@ namespace App\Actions\Attendance;
 use App\Actions\Attendance\Exceptions\QrScanDeniedException;
 use App\Actions\Audit\LogAuditEvent;
 use App\Jobs\SendGuardianNotification;
+use App\Jobs\SendWebPush;
 use App\Models\AdmissionSlip;
 use App\Models\AttendanceRecord;
 use App\Models\GuardianNotification;
 use App\Models\NotificationSetting;
 use App\Models\Student;
+use App\Models\User;
+use Illuminate\Support\Carbon;
 
 class ProcessQrScan
 {
-    public function handle(?string $qrToken, ?string $lrn, ?string $ip, ?string $userAgent, ?string $customTime = null, string $mode = 'auto'): array
+    /**
+     * Client-generated identifier for a scan, used to make offline sync
+     * idempotent: replaying the same scan never creates a second record.
+     */
+    private ?string $clientReference = null;
+
+    private ?Carbon $scannedAt = null;
+
+    public function handle(?string $qrToken, ?string $lrn, ?string $ip, ?string $userAgent, ?string $customTime = null, string $mode = 'auto', ?string $clientReference = null, ?string $scannedAt = null): array
     {
+        $this->clientReference = $clientReference;
+        $this->scannedAt = $scannedAt ? Carbon::parse($scannedAt) : null;
+
+        // A queued scan that already reached the server (for example the guard
+        // retried after a flaky connection) must not be processed twice.
+        if ($clientReference) {
+            $alreadySynced = AttendanceRecord::withTrashed()
+                ->where('client_reference', $clientReference)
+                ->first();
+
+            if ($alreadySynced) {
+                return [
+                    'action' => $alreadySynced->time_out ? 'time_out' : 'time_in',
+                    'record' => $alreadySynced,
+                    'duplicate' => true,
+                ];
+            }
+        }
+
         $student = Student::where(function ($query) use ($qrToken, $lrn) {
             if ($qrToken) {
                 $query->where('qr_token', $qrToken);
@@ -34,7 +64,7 @@ class ProcessQrScan
             throw new QrScanDeniedException('inactive', 'Student account is inactive.', $student);
         }
 
-        $today = now()->toDateString();
+        $today = $this->scanTime()->toDateString();
 
         // Look for any record for today, including soft-deleted ones. A guard
         // may "re-take" attendance by deleting a record; the row still exists
@@ -85,7 +115,7 @@ class ProcessQrScan
     private function processTimeIn(Student $student, string $today, ?string $ip, ?string $userAgent, ?string $customTime, ?AttendanceRecord $restored = null): array
     {
         $status = $this->classifyStatus($student);
-        $timeIn = now()->format('H:i:s');
+        $timeIn = $this->scanTime()->format('H:i:s');
 
         if ($restored) {
             // Re-take: revive the soft-deleted row in place so the unique
@@ -95,6 +125,7 @@ class ProcessQrScan
                 'time_in' => $timeIn,
                 'time_out' => null,
                 'recorded_by' => null,
+                'client_reference' => $this->clientReference,
                 'metadata' => [
                     'ip_address' => $ip,
                     'user_agent' => $userAgent,
@@ -109,6 +140,7 @@ class ProcessQrScan
                 'status' => $status,
                 'time_in' => $timeIn,
                 'source' => 'scan',
+                'client_reference' => $this->clientReference,
                 'metadata' => [
                     'ip_address' => $ip,
                     'user_agent' => $userAgent,
@@ -130,6 +162,8 @@ class ProcessQrScan
         );
 
         $this->notifyGuardian($student, $record, $status);
+        $this->notifyStudentPush($student, $record, 'time_in');
+        $this->notifyAdminPush($student, $record, 'time_in');
 
         return [
             'action' => 'time_in',
@@ -139,7 +173,7 @@ class ProcessQrScan
 
     private function processTimeOut(AttendanceRecord $existing, Student $student, ?string $ip, ?string $userAgent, ?string $customTime): array
     {
-        $timeOut = now()->format('H:i:s');
+        $timeOut = $this->scanTime()->format('H:i:s');
 
         $existing->update([
             'time_out' => $timeOut,
@@ -165,6 +199,8 @@ class ProcessQrScan
         );
 
         $this->notifyGuardian($student, $existing->fresh(), 'time_out');
+        $this->notifyStudentPush($student, $existing->fresh(), 'time_out');
+        $this->notifyAdminPush($student, $existing->fresh(), 'time_out');
 
         return [
             'action' => 'time_out',
@@ -172,12 +208,71 @@ class ProcessQrScan
         ];
     }
 
+    /**
+     * Push a notification to the student's own devices so they immediately see
+     * that their attendance was recorded, even with the app closed.
+     */
+    private function notifyStudentPush(Student $student, AttendanceRecord $record, string $action): void
+    {
+        $user = $student->user;
+
+        if (! $user) {
+            return;
+        }
+
+        SendWebPush::dispatch($user->id, [
+            'title' => $action === 'time_in' ? 'Attendance recorded' : 'Time out recorded',
+            'body' => $action === 'time_in'
+                ? "{$student->full_name} timed in at {$record->time_in}."
+                : "{$student->full_name} timed out at {$record->time_out}.",
+            'url' => '/attendance-records/'.$record->id,
+            'tag' => 'attendance-'.$record->id,
+        ]);
+    }
+
+    /**
+     * Alert the administrators' devices about every gate scan so the office
+     * sees arrivals and departures in real time, even with the app closed.
+     */
+    private function notifyAdminPush(Student $student, AttendanceRecord $record, string $action): void
+    {
+        $adminIds = User::query()
+            ->whereIn('role', ['admin', 'super_admin'])
+            ->where('is_active', true)
+            ->pluck('id');
+
+        if ($adminIds->isEmpty()) {
+            return;
+        }
+
+        $section = $student->section?->name;
+        $label = $action === 'time_in'
+            ? "timed in at {$record->time_in}"
+            : "timed out at {$record->time_out}";
+
+        $payload = [
+            'title' => $action === 'time_in' ? 'New arrival at the gate' : 'Departure at the gate',
+            'body' => trim("{$student->full_name} {$label}".($section ? " — {$section}" : '')).'.',
+            'url' => '/attendance-records/'.$record->id,
+            'tag' => 'admin-attendance-'.$record->id,
+        ];
+
+        foreach ($adminIds as $adminId) {
+            SendWebPush::dispatch($adminId, $payload);
+        }
+    }
+
+    private function scanTime(): Carbon
+    {
+        return $this->scannedAt ?? now();
+    }
+
     private function requiresApprovedAdmissionSlip(Student $student): bool
     {
-        $previousSchoolDay = now()->subDay();
+        $previousSchoolDay = $this->scanTime()->copy()->subDay();
 
         if ($previousSchoolDay->isWeekend()) {
-            $previousSchoolDay = now()->subDays(3);
+            $previousSchoolDay = $this->scanTime()->copy()->subDays(3);
         }
 
         $wasAbsent = AttendanceRecord::where('student_id', $student->id)
@@ -198,7 +293,7 @@ class ProcessQrScan
     private function classifyStatus(Student $student): string
     {
         $schedule = $student->section?->schedules
-            ->where('day_of_week', now()->format('l'))
+            ->where('day_of_week', $this->scanTime()->format('l'))
             ->first();
 
         if (! $schedule) {
@@ -206,7 +301,7 @@ class ProcessQrScan
         }
 
         $scheduledStart = strtotime($schedule->start_time);
-        $currentTime = strtotime(now()->format('H:i:s'));
+        $currentTime = strtotime($this->scanTime()->format('H:i:s'));
         $graceSeconds = $schedule->grace_minutes * 60;
 
         return $currentTime > $scheduledStart + $graceSeconds ? 'late' : 'present';
@@ -236,8 +331,8 @@ class ProcessQrScan
                 : ($record->status !== 'late' ? 'Only late arrivals are emailed and this student arrived on time.' : null);
         }
 
-        $date = now()->format('F j, Y');
-        $time = now()->format('h:i A');
+        $date = $this->scanTime()->format('F j, Y');
+        $time = $this->scanTime()->format('h:i A');
 
         $subject = $action === 'time_in'
             ? "Attendance Notification — {$student->full_name} has arrived at school"

@@ -103,7 +103,9 @@ class GoogleController extends Controller
 
         if (! $user) {
             // First-time Google user: carry the verified Google identity over to
-            // the registration form so they only need to fill in their student details.
+            // the registration form so they only need to fill in their student
+            // details. Registration always creates a student account, which is
+            // the only role Google sign-in allows.
             session()->put('pending_google', [
                 'email' => $email,
                 'name' => $googleUser['name'] ?? null,
@@ -115,6 +117,18 @@ class GoogleController extends Controller
 
         if (! $user->is_active) {
             return $this->backToLogin('Your account has been deactivated. Please contact an administrator.');
+        }
+
+        // Google sign-in is reserved for students. Staff accounts (guard,
+        // teacher, admin, super admin) must use the email/password form so the
+        // school keeps full control over privileged access.
+        if ($user->role !== 'student') {
+            Log::warning('Google sign-in blocked for non-student role', [
+                'user_id' => $user->id,
+                'role' => $user->role,
+            ]);
+
+            return $this->backToLogin('Google sign-in is for student accounts only. Please log in with your email and password.');
         }
 
         Auth::login($user, true);
