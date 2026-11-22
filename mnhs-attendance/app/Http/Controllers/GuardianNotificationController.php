@@ -17,9 +17,28 @@ class GuardianNotificationController extends Controller
 
         $notifications = $query->latest()->paginate(min(max((int) $request->get('per_page', 5), 1), 100));
 
+        $counts = GuardianNotification::query()
+            ->select('status')
+            ->selectRaw('count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $mailer = (string) config('mail.default');
+
         return Inertia::render('GuardianNotifications/Index', [
             'notifications' => $notifications,
             'filters' => $request->only(['status']),
+            'stats' => [
+                'pending' => (int) ($counts['pending'] ?? 0),
+                'sent' => (int) ($counts['sent'] ?? 0),
+                'failed' => (int) ($counts['failed'] ?? 0),
+                'total' => (int) $counts->sum(),
+            ],
+            'mail' => [
+                'mailer' => $mailer,
+                'configured' => $mailer !== 'log',
+                'from' => (string) config('mail.from.address'),
+            ],
         ]);
     }
 

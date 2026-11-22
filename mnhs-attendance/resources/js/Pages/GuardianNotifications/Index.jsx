@@ -17,11 +17,36 @@ function statusBadge(status) {
     );
 }
 
-export default function Index({ notifications, filters }) {
+function SummaryCard({ label, value, tone, onClick, active }) {
+    const tones = {
+        pending: 'text-amber-700',
+        sent: 'text-emerald-700',
+        failed: 'text-red-700',
+        total: 'text-slate-900',
+    };
+
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={`card card-pad flex flex-col items-start text-left transition hover:-translate-y-0.5 hover:shadow-md ${active ? 'ring-2 ring-navy-500' : ''}`}
+        >
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+            <span className={`mt-1 text-2xl font-bold ${tones[tone]}`}>{value}</span>
+        </button>
+    );
+}
+
+export default function Index({ notifications, filters, stats, mail }) {
     const [status, setStatus] = useState(filters.status || '');
 
     const handleFilter = () => {
         router.get(route('guardian-notifications.index'), { status }, { preserveState: true });
+    };
+
+    const selectStatus = (value) => {
+        setStatus(value);
+        router.get(route('guardian-notifications.index'), { status: value }, { preserveState: true });
     };
 
     return (
@@ -36,6 +61,26 @@ export default function Index({ notifications, filters }) {
             <Head title="Guardian Notifications" />
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                {!mail.configured && (
+                    <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                        <p className="text-sm font-semibold text-amber-900">Email delivery is not configured</p>
+                        <p className="mt-1 text-sm text-amber-800">
+                            The application is using the <code className="font-mono">{mail.mailer}</code> mail transport, so no
+                            email leaves the server and every guardian notification is marked as failed. Set{' '}
+                            <code className="font-mono">MAIL_MAILER</code>, <code className="font-mono">MAIL_HOST</code>,
+                            {' '}<code className="font-mono">MAIL_USERNAME</code>, and <code className="font-mono">MAIL_PASSWORD</code> in the
+                            environment, then redeploy.
+                        </p>
+                    </div>
+                )}
+
+                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <SummaryCard label="Pending" value={stats.pending} tone="pending" active={status === 'pending'} onClick={() => selectStatus('pending')} />
+                    <SummaryCard label="Sent" value={stats.sent} tone="sent" active={status === 'sent'} onClick={() => selectStatus('sent')} />
+                    <SummaryCard label="Failed" value={stats.failed} tone="failed" active={status === 'failed'} onClick={() => selectStatus('failed')} />
+                    <SummaryCard label="Total" value={stats.total} tone="total" active={status === ''} onClick={() => selectStatus('')} />
+                </div>
+
                 <div className="card card-pad mb-6">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                         <div className="sm:w-56">
@@ -81,7 +126,14 @@ export default function Index({ notifications, filters }) {
                                         </td>
                                         <td className="td text-slate-600">{n.guardian_email}</td>
                                         <td className="td max-w-xs truncate text-slate-600">{n.subject}</td>
-                                        <td className="td">{statusBadge(n.status)}</td>
+                                        <td className="td">
+                            {statusBadge(n.status)}
+                            {n.status === 'failed' && n.failure_reason && (
+                                <p className="mt-1 max-w-[16rem] truncate text-xs text-red-600" title={n.failure_reason}>
+                                    {n.failure_reason}
+                                </p>
+                            )}
+                        </td>
                                         <td className="td text-slate-500">{n.sent_at || n.created_at}</td>
                                         <td className="td text-end">
                                             <Link
