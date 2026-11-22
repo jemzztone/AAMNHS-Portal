@@ -49,7 +49,7 @@ services:
           name: aamnhs-db
           property: password
       - key: DB_SSLMODE
-        value: require
+        value: prefer
       - key: SESSION_DRIVER
         value: redis
       - key: SESSION_ENCRYPT
