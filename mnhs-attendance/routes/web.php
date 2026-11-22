@@ -19,6 +19,8 @@ use App\Http\Controllers\SectionScheduleController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,6 +31,29 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
+
+// Health probe used by Render. Verifies the database and cache/session store,
+// not just that PHP is answering, so a broken dependency fails the deploy.
+Route::get('/health', function () {
+    $healthy = true;
+
+    try {
+        DB::connection()->select('select 1');
+    } catch (\Throwable) {
+        $healthy = false;
+    }
+
+    try {
+        Cache::store()->put('health-check', 'ok', 10);
+    } catch (\Throwable) {
+        $healthy = false;
+    }
+
+    return response()->json(
+        ['status' => $healthy ? 'ok' : 'unavailable'],
+        $healthy ? 200 : 503,
+    );
+})->name('health');
 
 Route::middleware(['auth', 'verified', 'active', 'force-password-change'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

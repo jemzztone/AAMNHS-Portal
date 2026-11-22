@@ -4,12 +4,11 @@ namespace App\Actions\Attendance;
 
 use App\Actions\Attendance\Exceptions\QrScanDeniedException;
 use App\Actions\Audit\LogAuditEvent;
-use App\Mail\GuardianAttendanceNotification;
+use App\Jobs\SendGuardianNotification;
 use App\Models\AdmissionSlip;
 use App\Models\AttendanceRecord;
 use App\Models\GuardianNotification;
 use App\Models\Student;
-use Illuminate\Support\Facades\Mail;
 
 class ProcessQrScan
 {
@@ -221,43 +220,31 @@ class ProcessQrScan
         $action = $status === 'time_out' ? 'time_out' : 'time_in';
         $date = now()->format('F j, Y');
         $time = now()->format('h:i A');
-        $statusLabel = $action === 'time_out' ? 'Checked out' : ucfirst($record->status);
 
         $subject = $action === 'time_in'
             ? "Attendance Notification — {$student->full_name} has arrived at school"
             : "Attendance Notification — {$student->full_name} has left the school premises";
+
+        $body = "Your child {$student->full_name} has ".($action === 'time_in' ? 'arrived at school' : 'left the school premises')." at {$time} on {$date}.";
 
         GuardianNotification::create([
             'student_id' => $student->id,
             'attendance_record_id' => $record->id,
             'guardian_email' => $student->guardian_email,
             'subject' => $subject,
-            'body' => "Your child {$student->full_name} has ".($action === 'time_in' ? 'arrived at school' : 'left the school premises')." at {$time} on {$date}.",
+            'body' => $body,
             'status' => 'pending',
         ]);
 
-        try {
-            // Sent synchronously so guardians receive the notice in real-time
-            // the moment a student scans in or out at the gate.
-            Mail::to($student->guardian_email)->send(
-                new GuardianAttendanceNotification(
-                    student: $student,
-                    action: $action,
-                    date: $date,
-                    time: $time,
-                    status: $statusLabel,
-                ),
-            );
-
-            GuardianNotification::where('student_id', $student->id)
-                ->where('attendance_record_id', $record->id)
-                ->where('status', 'pending')
-                ->update(['status' => 'sent', 'sent_at' => now()]);
-        } catch (\Exception $e) {
-            GuardianNotification::where('student_id', $student->id)
-                ->where('attendance_record_id', $record->id)
-                ->where('status', 'pending')
-                ->update(['status' => 'failed', 'failure_reason' => $e->getMessage()]);
-        }
+        // Queue the email so a slow or unreachable mail provider can never
+        // block the gate scanner. The job flips the notification to sent or
+        // failed once delivery has been attempted.
+        SendGuardianNotification::dispatch(
+            $student->guardian_email,
+            $subject,
+            $body,
+            $record->id,
+            $student->id,
+        );
     }
 }

@@ -1,3 +1,8 @@
+# NOTE: the production service (aamnhs-attendance) and its Postgres/Key Value
+# store were provisioned directly in the AAMNHS Portal workspace. Applying this
+# blueprint to that same workspace would try to create duplicate resources with
+# the same names. Use it for a fresh workspace, or delete it if the live
+# resources are the source of truth.
 services:
   - type: web
     name: aamnhs-attendance
@@ -6,7 +11,7 @@ services:
     region: singapore
     dockerfilePath: mnhs-attendance/Dockerfile
     dockerContext: mnhs-attendance
-    healthCheckPath: /up
+    healthCheckPath: /health
     envVars:
       - key: APP_NAME
         value: "AAMNHS Attendance"

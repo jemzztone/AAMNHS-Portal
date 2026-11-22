@@ -41,6 +41,19 @@ class SendGuardianNotification implements ShouldQueue
             return;
         }
 
+        // The log mailer reports success without delivering anything. Mark the
+        // notice as failed instead of claiming it was sent so unconfigured
+        // mail is visible in the Guardian Notifications page.
+        if (config('mail.default') === 'log') {
+            $notification->update([
+                'status' => 'failed',
+                'failure_reason' => 'Mail transport is not configured (MAIL_MAILER=log); the notice was not delivered.',
+                'attempts' => $notification->attempts + 1,
+            ]);
+
+            return;
+        }
+
         try {
             $student = $notification->student;
             $record = $notification->attendanceRecord;

@@ -35,7 +35,9 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'super_admin',
             'is_active' => true,
-            'force_password_change' => false,
+            // Demo accounts ship with a published password; force a change
+            // on first login so a real deployment cannot stay on it.
+            'force_password_change' => true,
             'email_verified_at' => now(),
         ]);
 
@@ -45,7 +47,9 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'admin',
             'is_active' => true,
-            'force_password_change' => false,
+            // Demo accounts ship with a published password; force a change
+            // on first login so a real deployment cannot stay on it.
+            'force_password_change' => true,
             'email_verified_at' => now(),
         ]);
 
@@ -55,7 +59,9 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'teacher',
             'is_active' => true,
-            'force_password_change' => false,
+            // Demo accounts ship with a published password; force a change
+            // on first login so a real deployment cannot stay on it.
+            'force_password_change' => true,
             'email_verified_at' => now(),
         ]);
 
@@ -65,7 +71,9 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'security_guard',
             'is_active' => true,
-            'force_password_change' => false,
+            // Demo accounts ship with a published password; force a change
+            // on first login so a real deployment cannot stay on it.
+            'force_password_change' => true,
             'email_verified_at' => now(),
         ]);
 
@@ -75,7 +83,9 @@ class DatabaseSeeder extends Seeder
             'password' => $password,
             'role' => 'student',
             'is_active' => true,
-            'force_password_change' => false,
+            // Demo accounts ship with a published password; force a change
+            // on first login so a real deployment cannot stay on it.
+            'force_password_change' => true,
             'email_verified_at' => now(),
         ]);
 
@@ -162,7 +172,9 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('Password123!'),
                 'role' => 'student',
                 'is_active' => true,
-                'force_password_change' => false,
+                // Demo accounts ship with a published password; force a change
+            // on first login so a real deployment cannot stay on it.
+            'force_password_change' => true,
                 'email_verified_at' => now(),
             ]);
 

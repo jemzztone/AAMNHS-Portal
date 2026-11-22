@@ -1,5 +1,14 @@
 <?php
 
+// Uploads must survive a redeploy, and Render's free plan has no persistent
+// disk. When Supabase storage credentials are present, the public (student
+// photos) and private (admission slip attachments) disks are backed by S3 so
+// files outlive the container; otherwise they fall back to local storage.
+$supabaseKey = env('SUPABASE_STORAGE_KEY');
+$supabaseSecret = env('SUPABASE_STORAGE_SECRET');
+$supabaseUrl = env('SUPABASE_STORAGE_URL');
+$useSupabase = $supabaseKey && $supabaseSecret && $supabaseUrl;
+
 return [
 
     /*
@@ -40,7 +49,18 @@ return [
 
         // Admission slip attachments. Referenced by `Storage::disk('private')`,
         // so it must exist even when the default disk is a remote one.
-        'private' => [
+        'private' => $useSupabase ? [
+            'driver' => 's3',
+            'key' => $supabaseKey,
+            'secret' => $supabaseSecret,
+            'region' => env('AWS_DEFAULT_REGION', 'auto'),
+            'bucket' => env('SUPABASE_STORAGE_BUCKET', 'aamnhs-files'),
+            'endpoint' => $supabaseUrl,
+            'use_path_style_endpoint' => true,
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ] : [
             'driver' => 'local',
             'root' => storage_path('app/private'),
             'serve' => false,
@@ -48,7 +68,21 @@ return [
             'report' => false,
         ],
 
-        'public' => [
+        'public' => $useSupabase ? [
+            'driver' => 's3',
+            'key' => $supabaseKey,
+            'secret' => $supabaseSecret,
+            'region' => env('AWS_DEFAULT_REGION', 'auto'),
+            'bucket' => env('SUPABASE_STORAGE_BUCKET', 'aamnhs-files'),
+            'url' => $supabaseUrl,
+            'endpoint' => $supabaseUrl,
+            'use_path_style_endpoint' => true,
+            // Photos are streamed through an authenticated controller, so no
+            // public object ACL is needed.
+            'visibility' => 'private',
+            'throw' => false,
+            'report' => false,
+        ] : [
             'driver' => 'local',
             'root' => storage_path('app/public'),
             'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
