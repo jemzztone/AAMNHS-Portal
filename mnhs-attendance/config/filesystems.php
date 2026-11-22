@@ -38,6 +38,16 @@ return [
             'report' => false,
         ],
 
+        // Admission slip attachments. Referenced by `Storage::disk('private')`,
+        // so it must exist even when the default disk is a remote one.
+        'private' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private'),
+            'serve' => false,
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

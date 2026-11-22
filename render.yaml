@@ -2,17 +2,32 @@ services:
   - type: web
     name: aamnhs-attendance
     runtime: docker
+    plan: free
+    region: singapore
     dockerfilePath: mnhs-attendance/Dockerfile
     dockerContext: mnhs-attendance
+    healthCheckPath: /up
     envVars:
+      - key: APP_NAME
+        value: "AAMNHS Attendance"
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
         value: "false"
+      # Set in the Render dashboard (do not commit a real key to git).
       - key: APP_KEY
-        value: base64:wTCPi8emvTlti6/SP3+6bjeSe8UjNLGMIuSLaK2xg94=
+        sync: false
       - key: APP_URL
         value: https://aamnhs-attendance.onrender.com
+      - key: APP_LOCALE
+        value: en
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+      # Render routes traffic to the port named by PORT.
+      - key: PORT
+        value: "8080"
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -39,21 +54,30 @@ services:
         value: redis
       - key: SESSION_ENCRYPT
         value: "true"
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
       - key: CACHE_STORE
         value: redis
       - key: QUEUE_CONNECTION
         value: redis
+      - key: REDIS_CLIENT
+        value: phpredis
       - key: REDIS_HOST
         fromService:
           type: redis
           name: aamnhs-redis
           property: host
       - key: REDIS_PORT
-        value: "6379"
+        fromService:
+          type: redis
+          name: aamnhs-redis
+          property: port
+      # Render Key Value internal connections are not TLS; the external
+      # connection string is. The app talks to it over the private network.
       - key: REDIS_TLS
-        value: "true"
-      - key: REDIS_CLIENT
-        value: phpredis
+        value: "false"
+      # Set REDIS_TLS to "true" only if the service is switched to the
+      # external rediss:// URL instead of the internal host/port above.
       - key: FILESYSTEM_DISK
         value: supabase
       - key: SUPABASE_STORAGE_KEY
@@ -90,8 +114,6 @@ services:
         sync: false
       - key: QUEUE_WORKER_SECRET
         sync: false
-      - key: REDIS_CLIENT
-        value: phpredis
       - key: AI_PROVIDER
         value: gemini
       - key: GEMINI_MODEL
