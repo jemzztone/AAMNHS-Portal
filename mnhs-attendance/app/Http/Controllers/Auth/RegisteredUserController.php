@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -52,10 +53,16 @@ class RegisteredUserController extends Controller
         $fromGoogle = $googlePending
             && strtolower((string) $googlePending['email']) === strtolower($request->email);
 
+        // Google sign-in: generate a random password and log the user in directly
+        // so they are not asked to type and confirm a password a second time.
+        $password = $fromGoogle
+            ? Str::random(12)
+            : $request->password;
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => Hash::make($password),
             'email_verified_at' => $fromGoogle ? now() : null,
         ]);
 
@@ -78,6 +85,12 @@ class RegisteredUserController extends Controller
         }
 
         Auth::login($user);
+
+        // Show the generated password once so the user can note it.
+        if ($fromGoogle) {
+            session()->flash('generated_password', $password);
+            session()->flash('show_password_notification', true);
+        }
 
         return redirect(route('dashboard', absolute: false));
     }

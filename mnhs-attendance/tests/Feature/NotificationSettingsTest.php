@@ -140,10 +140,19 @@ class NotificationSettingsTest extends TestCase
         $student = $this->makeStudent();
         $scanner = new ProcessQrScan;
 
+        // First scan: time-in.
         $scanner->handle($student->qr_token, null, '127.0.0.1', 'phpunit');
         Queue::fake();
 
-        $scanner->handle($student->qr_token, null, '127.0.0.1', 'phpunit');
+        // Second scan: time-out. Use a scannedAt 5 seconds after the first
+        // so the 3-second auto-mode cooldown has already elapsed.
+        $scanner->handle(
+            $student->qr_token,
+            null,
+            '127.0.0.1',
+            'phpunit',
+            scannedAt: now()->addSeconds(5),
+        );
 
         $this->assertDatabaseHas('guardian_notifications', [
             'student_id' => $student->id,

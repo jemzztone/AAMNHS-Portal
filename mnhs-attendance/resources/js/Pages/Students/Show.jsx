@@ -3,10 +3,13 @@ import { Head, Link } from '@inertiajs/react';
 
 function formatTime12(time) {
     if (!time) return '—';
-    const [h, m] = time.split(':');
+    const [h, m] = String(time).split(':');
     const hour = parseInt(h, 10);
     const ampm = hour >= 12 ? 'PM' : 'AM';
-    return `${hour % 12 || 12}:${m} ${ampm}`;
+    if (hour === 0) return `12:${m} AM`;
+    if (hour === 12) return `12:${m} PM`;
+    if (hour > 12) return `${String(hour - 12).padStart(2, '0')}:${m} PM`;
+    return `${String(hour).padStart(2, '0')}:${m} AM`;
 }
 
 function statusBadge(status) {

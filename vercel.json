@@ -1,0 +1,45 @@
+{
+  "buildCommand": "echo 'Pre-built locally'",
+  "devCommand": "cd mnhs-attendance && composer run dev",
+  "installCommand": "echo 'Pre-built locally'",
+  "regions": ["hnd1"],
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.7.3"
+    },
+    "api/queue/work.php": {
+      "runtime": "vercel-php@0.7.3"
+    }
+  },
+  "routes": [
+    {
+      "src": "/build/(.*)",
+      "dest": "/mnhs-attendance/public/build/$1"
+    },
+    {
+      "src": "/storage/(.*)",
+      "dest": "/mnhs-attendance/public/storage/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
+  ],
+  "outputDirectory": "mnhs-attendance/public",
+  "crons": [
+    {
+      "path": "/api/queue/work",
+      "schedule": "0 0 * * *"
+    }
+  ],
+  "env": {
+    "APP_ENV": "production",
+    "APP_DEBUG": "false",
+    "LOG_CHANNEL": "stderr",
+    "SESSION_DRIVER": "database",
+    "SESSION_ENCRYPT": "true",
+    "CACHE_STORE": "database",
+    "QUEUE_CONNECTION": "database",
+    "FILESYSTEM_DISK": "supabase"
+  }
+}

@@ -48,11 +48,13 @@ function Detail({ label, value }) {
 
 function formatTime(time) {
     if (!time) return '—';
-    const [hours, minutes] = time.split(':');
-    const h = parseInt(hours, 10);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    const h12 = h % 12 || 12;
-    return `${h12}:${minutes} ${ampm}`;
+    const [h, m] = String(time).split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    if (hour === 0) return `12:${m} AM`;
+    if (hour === 12) return `12:${m} PM`;
+    if (hour > 12) return `${String(hour - 12).padStart(2, '0')}:${m} PM`;
+    return `${String(hour).padStart(2, '0')}:${m} AM`;
 }
 
 function formatDate(date) {
@@ -276,9 +278,16 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
 
             if (response.ok) {
                 setResult(data);
-                setQrToken('');
-                playBeep();
-                refreshRecent();
+
+                if (data.cooldown) {
+                    setQrToken('');
+                    playBeep();
+                    refreshRecent();
+                } else if (data.success) {
+                    setQrToken('');
+                    playBeep();
+                    refreshRecent();
+                }
             } else {
                 setError(data.message || 'Scan failed');
                 if (data.student) setResult(data);
@@ -289,6 +298,24 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
             setLoading(false);
         }
     };
+
+    // PWA auto-update: listen for update-available event and show notification.
+    useEffect(() => {
+        const handleUpdateAvailable = () => {
+            setResult({
+                success: true,
+                offline: false,
+                message: 'New version available! Reload to see changes.',
+                pwaUpdate: true,
+            });
+        };
+
+        window.addEventListener('pwa-update-available', handleUpdateAvailable);
+
+        return () => {
+            window.removeEventListener('pwa-update-available', handleUpdateAvailable);
+        };
+    }, []);
 
     const handleCameraScan = (decodedText) => {
         submitScan({ qr_token: decodedText });
@@ -385,6 +412,26 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
             }
         >
             <Head title="Guard Scanner" />
+
+            {result?.pwaUpdate && (
+                <div className="fixed top-4 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 sm:top-8">
+                    <div className="flex items-center justify-center gap-3 rounded-xl bg-navy-900 px-5 py-3 shadow-lg ring-1 ring-navy-700 sm:w-auto sm:flex-row">
+                        <svg className="h-5 w-5 shrink-0 text-navy-200" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <p className="flex-1 text-sm font-semibold text-white">
+                            New version available — reload to see changes
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="shrink-0 rounded-lg bg-white px-4 py-1.5 text-sm font-semibold text-navy-900 transition hover:bg-navy-50 active:bg-navy-100"
+                        >
+                            Reload now
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 {(!isOnline || pendingSync > 0) && (
@@ -486,8 +533,7 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                                 <div className="mt-3 flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                                     <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Active — Time In: {formatTime(schedule.time_in)} / Time Out: {formatTime(schedule.time_out)}
+                                    </svg>                                        Active — Time In: {formatTime(schedule.time_in)} / Time Out: {formatTime(schedule.time_out)}
                                 </div>
                             )}
 
@@ -1022,6 +1068,27 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                         )}
                     </div>
                 </div>
+            </div>
+            {/* GCash-style center QR scan button for mobile */}
+            <div className="fixed inset-x-0 bottom-20 z-30 lg:hidden">
+                <button
+                    onClick={() => {
+                        const scanner = document.querySelector('#qr-reader');
+                        if (scanner) {
+                            const buttons = scanner.querySelectorAll('button');
+                            buttons.forEach(btn => {
+                                if (btn.textContent.includes('Start')) {
+                                    btn.click();
+                                }
+                            });
+                        }
+                    }}
+                    className="mx-auto mb-4 block rounded-full bg-navy-800 px-6 py-3 shadow-lg ring-2 ring-navy-700 transition hover:bg-navy-700 active:bg-navy-900"
+                >
+                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
+                    </svg>
+                </button>
             </div>
         </AuthenticatedLayout>
     );

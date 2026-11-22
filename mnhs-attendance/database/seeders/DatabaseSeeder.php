@@ -163,6 +163,7 @@ class DatabaseSeeder extends Seeder
             ['first_name' => 'Ana', 'last_name' => 'Cruz', 'lrn' => '136000000003'],
             ['first_name' => 'Pedro', 'last_name' => 'Garcia', 'lrn' => '136000000004'],
             ['first_name' => 'Rosa', 'last_name' => 'Mendoza', 'lrn' => '136000000005'],
+            ['first_name' => 'Juan', 'last_name' => 'Dela Cruz', 'lrn' => '136000000006'],
         ];
 
         foreach ($studentData as $index => $data) {

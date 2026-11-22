@@ -62,7 +62,7 @@
 @layer components {
     /* Reusable surfaces */
     .card {
-        @apply rounded-2xl border border-slate-200/80 bg-white shadow-card;
+        @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_1px_3px_0_rgba(0,0,0,0.04),0_1px_2px_0_rgba(0,0,0,0.06)];
     }
 
     .card-sm {
@@ -85,21 +85,30 @@
         @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-navy-500;
     }
 
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
     /* Buttons */
     .btn {
         @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-semibold transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     }
 
     .btn-primary {
-        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-navy-800 px-4 py-2 text-sm font-semibold text-white transition duration-150 ease-in-out hover:bg-navy-700 active:bg-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-navy-800 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_0_rgba(0,0,0,0.08)] transition duration-150 ease-in-out hover:bg-navy-700 hover:shadow-md active:bg-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     }
 
     .btn-outline {
-        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition duration-150 ease-in-out hover:border-navy-300 hover:bg-navy-50 hover:text-navy-800 active:bg-navy-100 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition duration-150 ease-in-out hover:border-navy-300 hover:bg-navy-50 hover:text-navy-800 active:bg-navy-100 focus:outline-none focus:ring-2 focus:ring-navy-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     }
 
     .btn-danger {
-        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-red-600 px-4 py-2 text-sm font-semibold text-white transition duration-150 ease-in-out hover:bg-red-500 active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+        @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-transparent bg-red-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_0_rgba(0,0,0,0.08)] transition duration-150 ease-in-out hover:bg-red-500 hover:shadow-md active:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
     }
 
     .btn-small {
@@ -108,7 +117,7 @@
 
     /* Forms */
     .input {
-        @apply w-full rounded-lg border-slate-300 bg-white text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-navy-500 focus:ring-navy-500 focus:outline-none;
+        @apply w-full rounded-lg border border-slate-300 bg-white text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:border-navy-500 focus:ring-navy-500 focus:outline-none transition duration-150;
     }
 
     .input-error {
@@ -155,6 +164,10 @@
 
     .badge-dot {
         @apply inline-block h-1.5 w-1.5 rounded-full shrink-0;
+    }
+
+    .hamburger-line {
+        @apply relative box-border h-[1.25rem] w-6 translate-x-0.5 stroke-current stroke-[1.5] fill-transparent transition-all duration-200;
     }
 
     /* Loading animation */
@@ -214,6 +227,12 @@
         }
         50% {
             opacity: 0.7;
+        }
+    }
+
+    @media (max-width: 1023px) {
+        .mobile-bottom-fixed {
+            bottom: 0;
         }
     }
 }

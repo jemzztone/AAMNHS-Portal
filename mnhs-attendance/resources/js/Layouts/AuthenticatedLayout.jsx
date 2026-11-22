@@ -487,23 +487,21 @@ export default function AuthenticatedLayout({ header, children }) {
                         <p>Attendance Monitoring System</p>
                     </div>
                 </footer>
-            </div>
-
-            {/* Mobile bottom nav — hidden when sidebar overlay is open */}
+            </div>                {/* Mobile bottom nav — hidden when sidebar overlay is open */}
             {!sidebarOpen && (
                 <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur-lg lg:hidden" role="navigation" aria-label="Mobile navigation">
-                    <div className="flex max-w-lg items-stretch justify-around py-1">
+                    <div className="flex items-center justify-around overflow-x-auto py-1 scrollbar-hide">
                         {navItems.slice(0, 5).map((item) => {
                             const active = route().current(item.href.split('.')[0]);
                             return (
                                 <Link
                                     key={item.href}
                                     href={route(item.href)}
-                                    className={`flex flex-1 flex-col items-center gap-0.5 py-2 transition duration-150 focus:outline-none focus:ring-2 focus:ring-navy-500 ${active ? 'text-navy-800' : 'text-slate-400 hover:text-navy-600'}`}
+                                    className={`flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 transition duration-150 focus:outline-none focus:ring-2 focus:ring-navy-500 min-w-[64px] ${active ? 'text-navy-800' : 'text-slate-400 hover:text-navy-600'}`}
                                     aria-current={active ? 'page' : undefined}
                                 >
                                     <svg
-                                        className={`h-5 w-5 ${active ? 'text-navy-700' : 'text-slate-400'}`}
+                                        className={`h-6 w-6 ${active ? 'text-navy-700' : 'text-slate-400'}`}
                                         xmlns="http://www.w3.org/2000/svg"
                                         fill="none"
                                         viewBox="0 0 24 24"
@@ -512,7 +510,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                     >
                                         {item.icon}
                                     </svg>
-                                    {item.name.split(' ')[0]}
+                                    <span className="text-[10px] font-medium whitespace-nowrap">
+                                        {item.name.split(' ')[0]}
+                                    </span>
                                 </Link>
                             );
                         })}

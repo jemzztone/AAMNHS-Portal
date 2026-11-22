@@ -1,0 +1,63 @@
+# Dependencies
+node_modules
+# vendor - include for Vercel PHP runtime
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Git
+.git
+.gitignore
+
+# Logs
+*.log
+mnhs-attendance/storage/logs/*
+
+# Cache
+mnhs-attendance/bootstrap/cache/*
+!mnhs-attendance/bootstrap/cache/.gitkeep
+
+# Testing
+phpunit.xml
+phpunit.xml.dist
+mnhs-attendance/tests/
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+mnhs-attendance/database/*.sqlite
+mnhs-attendance/database/*.sqlite-journal
+
+# Storage (except framework directories)
+mnhs-attendance/storage/app/*
+mnhs-attendance/storage/framework/cache/*
+mnhs-attendance/storage/framework/sessions/*
+mnhs-attendance/storage/framework/views/*
+mnhs-attendance/storage/framework/testing/*
+
+# Public storage (will be recreated)
+mnhs-attendance/public/storage
+
+# Build artifacts (we build locally)
+mnhs-attendance/public/build
+mnhs-attendance/public/hot
+
+# Vercel
+.vercel
+
+# Documentation
+*.md
+!README.md
+
+# Misc
+*.backup
+*.bak
+Thumbs.db
+.DS_Store

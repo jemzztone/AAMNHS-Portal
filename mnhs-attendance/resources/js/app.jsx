@@ -32,9 +32,44 @@ createInertiaApp({
                     if ('sync' in registration) {
                         registration.sync.register('sync-scans').catch(() => {});
                     }
+
+                    // Detect when a new service worker is ready and notify the app.
+                    let newWorker = null;
+                    registration.addEventListener('updatefound', () => {
+                        newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker?.state === 'installed' && navigator.serviceWorker.controller) {
+                                // New content is available — notify the app via custom event.
+                                window.dispatchEvent(
+                                    new CustomEvent('pwa-update-available', {
+                                        detail: { version: newWorker.scriptURL },
+                                    }),
+                                );
+                            }
+                        });
+                    });
+
+                    // Check for updates periodically.
+                    const checkForUpdate = () => {
+                        registration.update().catch(() => {});
+                    };
+                    setInterval(checkForUpdate, 60 * 60 * 1000); // Every hour
+                    checkForUpdate(); // Check on load
                 })
                 .catch(() => {});
         }
+
+        // PWA: show update banner when new version available.
+        window.addEventListener('pwa-update-available', () => {
+            // Auto-reload after 3 seconds (user can also click the banner)
+            const timeout = setTimeout(() => {
+                window.location.reload();
+            }, 3000);
+
+            window.addEventListener('pwa-reloading', () => {
+                clearTimeout(timeout);
+            });
+        });
 
         initOfflineSync();
     },

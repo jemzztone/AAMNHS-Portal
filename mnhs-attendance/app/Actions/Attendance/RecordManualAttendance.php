@@ -64,7 +64,7 @@ class RecordManualAttendance
             'status' => $data['status'],
             'source' => 'manual',
             'recorded_by' => $actor->id,
-            'time_in' => now()->format('H:i:s'),
+            'time_in' => now()->format('h:i:s A'),
         ]);
 
         (new LogAuditEvent)->handle(

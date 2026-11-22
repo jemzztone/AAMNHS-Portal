@@ -24,6 +24,13 @@ class ProcessQrScan
 
     private ?Carbon $scannedAt = null;
 
+    /**
+     * Cooldown period (in seconds) after a time-in before the same student
+     * can be time-out in auto mode. This prevents the scanner from treating
+     * a fast consecutive scan of the same QR as a time-out.
+     */
+    private const AUTO_TIME_OUT_COOLDOWN_SECONDS = 3;
+
     public function handle(?string $qrToken, ?string $lrn, ?string $ip, ?string $userAgent, ?string $customTime = null, string $mode = 'auto', ?string $clientReference = null, ?string $scannedAt = null): array
     {
         $this->clientReference = $clientReference;
@@ -96,6 +103,19 @@ class ProcessQrScan
 
             if ($mode === 'time_in') {
                 throw new QrScanDeniedException('already_timed_in', 'Student has already timed in today. Use Time Out to clock them out.', $student, $existing);
+            }
+
+            // Auto mode: only allow time-out after the cooldown period has
+            // elapsed since the time-in, so a fast re-scan of the same QR
+            // does not immediately log the student out.
+            if ($mode === 'auto' && ! $this->canTimeOutNow($existing)) {
+                return [
+                    'action' => 'time_in',
+                    'record' => $existing,
+                    'duplicate' => false,
+                    'cooldown' => true,
+                    'message' => "{$student->full_name} timed in at {$existing->time_in}. Wait a moment before timing out.",
+                ];
             }
 
             return $this->processTimeOut($existing, $student, $ip, $userAgent, $scheduledTimeOut);
@@ -173,7 +193,7 @@ class ProcessQrScan
 
     private function processTimeOut(AttendanceRecord $existing, Student $student, ?string $ip, ?string $userAgent, ?string $customTime): array
     {
-        $timeOut = $this->scanTime()->format('H:i:s');
+        $timeOut = $this->scanTime()->format('h:i:s A');
 
         $existing->update([
             'time_out' => $timeOut,
@@ -267,6 +287,20 @@ class ProcessQrScan
         return $this->scannedAt ?? now();
     }
 
+    /**
+     * In auto mode, a time-out is only allowed once the cooldown period has
+     * elapsed since the student's time-in. This stops the scanner from
+     * treating a fast re-scan as an immediate time-out.
+     */
+    private function canTimeOutNow(AttendanceRecord $record): bool
+    {
+        if ($this->scanTime()->subSeconds(self::AUTO_TIME_OUT_COOLDOWN_SECONDS)->gte($record->time_in)) {
+            return true;
+        }
+
+        return false;
+    }
+
     private function requiresApprovedAdmissionSlip(Student $student): bool
     {
         $previousSchoolDay = $this->scanTime()->copy()->subDay();
@@ -301,7 +335,7 @@ class ProcessQrScan
         }
 
         $scheduledStart = strtotime($schedule->start_time);
-        $currentTime = strtotime($this->scanTime()->format('H:i:s'));
+        $currentTime = strtotime($this->scanTime()->format('h:i:s A'));
         $graceSeconds = $schedule->grace_minutes * 60;
 
         return $currentTime > $scheduledStart + $graceSeconds ? 'late' : 'present';
