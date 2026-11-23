@@ -6,6 +6,7 @@ use App\Models\PushSubscription;
 use App\Services\WebPushService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PushSubscriptionController extends Controller
 {
@@ -54,12 +55,23 @@ class PushSubscriptionController extends Controller
             ], 422);
         }
 
-        $delivered = $webPush->sendToUser($request->user(), [
-            'title' => 'AAMNHS test notification',
-            'body' => 'Push notifications are working on this device.',
-            'url' => '/profile',
-            'tag' => 'aamnhs-test',
-        ]);
+        try {
+            $delivered = $webPush->sendToUser($request->user(), [
+                'title' => 'AAMNHS test notification',
+                'body' => 'Push notifications are working on this device.',
+                'url' => '/profile',
+                'tag' => 'aamnhs-test',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Web push test failed', [
+                'user_id' => $request->user()->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'message' => 'The test notification could not be sent. Please try again or contact the administrator.',
+            ], 422);
+        }
 
         if ($delivered === 0) {
             return response()->json([

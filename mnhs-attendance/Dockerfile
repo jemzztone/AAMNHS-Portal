@@ -14,7 +14,7 @@ RUN apk add --no-cache \
     postgresql-dev \
     oniguruma-dev \
     curl-dev \
-    && docker-php-ext-install pdo_pgsql zip gd pcntl opcache mbstring curl \
+    && docker-php-ext-install pdo_pgsql zip gd pcntl opcache mbstring curl bcmath \
     && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS \
     && pecl install redis \
     && docker-php-ext-enable redis \
