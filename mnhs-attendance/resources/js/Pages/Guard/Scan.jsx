@@ -5,6 +5,10 @@ import { flushScanQueue } from '@/offline/sync';
 import { Head, router } from '@inertiajs/react';
 import { useMemo, useState, useEffect, useRef } from 'react';
 
+// Match the server's auto-mode cooldown so a flaky connection cannot queue
+// two scans of the same student a fraction of a second apart.
+const OFFLINE_SCAN_COOLDOWN_MS = 3000;
+
 const statusBadge = (status) => {
     const map = {
         present: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -105,6 +109,7 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
     const [showQueue, setShowQueue] = useState(false);
     const [queuedScans, setQueuedScans] = useState([]);
     const [queueLoading, setQueueLoading] = useState(false);
+    const lastOfflineScanRef = useRef({});
     const scannerRef = useRef(null);
 
     /**
@@ -293,6 +298,61 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
     };
 
     const queueOfflineScan = async (payload) => {
+        const now = Date.now();
+        const keys = [payload.qr_token, payload.lrn]
+            .filter(Boolean)
+            .map((value) => String(value).trim());
+
+        const isCoolingDown = keys.some(
+            (key) =>
+                now - (lastOfflineScanRef.current[key] || 0) <
+                OFFLINE_SCAN_COOLDOWN_MS,
+        );
+
+        if (isCoolingDown) {
+            setQrToken('');
+            setError(
+                'Please wait 3 seconds before scanning the same student again.',
+            );
+            return;
+        }
+
+        // Remember the attempt immediately so two rapid scans cannot slip
+        // through while IndexedDB is being read.
+        keys.forEach((key) => {
+            lastOfflineScanRef.current[key] = now;
+        });
+
+        try {
+            const queued = await getQueuedScans();
+            const lastQueued = queued
+                .filter(
+                    (row) =>
+                        (payload.qr_token &&
+                            row.qr_token === payload.qr_token) ||
+                        (payload.lrn && row.lrn === payload.lrn),
+                )
+                .sort(
+                    (a, b) =>
+                        new Date(b.scanned_at || 0) -
+                        new Date(a.scanned_at || 0),
+                )[0];
+
+            const lastAt = lastQueued
+                ? new Date(lastQueued.scanned_at || 0).getTime()
+                : 0;
+
+            if (lastAt && now - lastAt < OFFLINE_SCAN_COOLDOWN_MS) {
+                setQrToken('');
+                setError(
+                    'Please wait 3 seconds before scanning the same student again.',
+                );
+                return;
+            }
+        } catch {
+            // IndexedDB read failures should not block an otherwise valid scan.
+        }
+
         const clientId =
             typeof crypto !== 'undefined' && crypto.randomUUID
                 ? crypto.randomUUID()

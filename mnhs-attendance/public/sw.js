@@ -1,5 +1,5 @@
 /* AAMNHS attendance PWA service worker */
-const CACHE = 'aamnhs-v3';
+const CACHE = 'aamnhs-v4';
 const OFFLINE_URL = '/offline.html';
 // Keep the install payload small: the full 2000px logo is ~4 MB, while these
 // icons are the ones the manifest and notifications actually need.
@@ -8,6 +8,8 @@ const PRECACHE = [
     '/manifest.webmanifest',
     '/images/icon-192.png',
     '/images/icon-512.png',
+    '/images/icon-maskable-512.png',
+    '/images/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', (event) => {

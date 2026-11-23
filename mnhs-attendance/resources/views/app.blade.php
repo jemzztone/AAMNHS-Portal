@@ -12,7 +12,8 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <link rel="apple-touch-icon" href="/images/icon-192.png">
+        <link rel="icon" href="/images/icon-192.png" type="image/png">
+        <link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
