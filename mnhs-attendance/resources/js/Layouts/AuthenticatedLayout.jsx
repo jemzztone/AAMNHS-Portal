@@ -326,12 +326,13 @@ function SidebarContent({ navItems, role, user, onNavigate }) {
                                         key={item.href}
                                         href={route(item.href)}
                                         onClick={(event) => {
-                                            // The offline queue must still open when
-                                            // Inertia's XHR cannot reach the server.
+                                            // Use a full navigation so the
+                                            // service worker can serve the cached
+                                            // page or offline monitor when the
+                                            // connection is down.
                                             if (
                                                 item.href ===
-                                                    'guard.offline-scans' &&
-                                                !navigator.onLine
+                                                'guard.offline-scans'
                                             ) {
                                                 event.preventDefault();
                                                 window.location.assign(
@@ -527,8 +528,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     onClick={(event) => {
                                         if (
                                             item.href ===
-                                                'guard.offline-scans' &&
-                                            !navigator.onLine
+                                            'guard.offline-scans'
                                         ) {
                                             event.preventDefault();
                                             window.location.assign(
