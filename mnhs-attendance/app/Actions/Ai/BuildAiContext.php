@@ -225,15 +225,14 @@ class BuildAiContext
     private function getAbsentStudents(User $user, ?string $startDate, ?string $endDate, ?string $sectionId): array
     {
         $query = Student::query()
-            ->select('students.id', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.section_id', DB::raw('COUNT(attendance_records.id) as absent_count'))
-            ->leftJoin('attendance_records', function ($join) use ($startDate, $endDate) {
+            ->select('students.id', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.section_id', DB::raw("COALESCE(COUNT(attendance_records.id), 0) as absent_count"))
+            ->join('attendance_records', function ($join) use ($startDate, $endDate) {
                 $join->on('students.id', '=', 'attendance_records.student_id')
-                    ->where('attendance_records.status', '=', 'absent')
                     ->whereDate('attendance_records.date', '>=', $startDate)
-                    ->whereDate('attendance_records.date', '<=', $endDate);
+                    ->whereDate('attendance_records.date', '<=', $endDate)
+                    ->where('attendance_records.status', 'absent');
             })
             ->groupBy('students.id', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.section_id')
-            ->having('absent_count', '>', 0)
             ->orderByDesc('absent_count')
             ->take(20);
 
