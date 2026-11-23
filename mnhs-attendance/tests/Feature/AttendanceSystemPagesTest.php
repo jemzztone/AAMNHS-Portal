@@ -8,6 +8,7 @@ use App\Models\AttendanceRecord;
 use App\Models\AuditLog;
 use App\Models\GradeLevel;
 use App\Models\Section;
+use App\Models\SectionSchedule;
 use App\Models\Student;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -194,6 +195,52 @@ class AttendanceSystemPagesTest extends TestCase
             'auditable_type' => AttendanceRecord::class,
             'auditable_id' => $record->id,
         ]);
+    }
+
+    public function test_section_schedule_show_and_edit_bind_the_requested_schedule(): void
+    {
+        $admin = $this->makeUser('admin');
+        $student = $this->makeStudent($this->makeUser('student'));
+        $section = $student->section;
+
+        $schedule = SectionSchedule::create([
+            'section_id' => $section->id,
+            'day_of_week' => 'Monday',
+            'start_time' => '07:30',
+            'end_time' => '16:00',
+            'grace_minutes' => 15,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('schedules.show', [$section, $schedule]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('SectionSchedules/Show')
+                ->where('schedule.id', $schedule->id));
+
+        $this->actingAs($admin)
+            ->get(route('schedules.edit', [$section, $schedule]))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('SectionSchedules/Edit')
+                ->where('schedule.id', $schedule->id));
+
+        $this->actingAs($admin)
+            ->put(route('schedules.update', [$section, $schedule]), [
+                'day_of_week' => 'Monday',
+                'start_time' => '08:00',
+                'end_time' => '16:30',
+                'grace_minutes' => 10,
+            ])
+            ->assertRedirect(route('schedules.index', $section));
+
+        $this->assertSame('08:00', $schedule->refresh()->start_time);
+
+        $this->actingAs($admin)
+            ->delete(route('schedules.destroy', [$section, $schedule]))
+            ->assertRedirect(route('schedules.index', $section));
+
+        $this->assertSoftDeleted('section_schedules', ['id' => $schedule->id]);
     }
 
     public function test_guard_scan_pages_are_restricted_to_security_guards(): void

@@ -54,11 +54,9 @@ class QRScanController extends Controller
         $record = $result['record'];
         $action = $result['action'];
 
-        $timeDisplay = $action === 'time_in' ? $record->time_in : $record->time_out;
-
         $message = $action === 'time_in'
-            ? "Student {$record->status}. Time in recorded at {$record->time_in}."
-            : "Student checked out. Time out recorded at {$record->time_out}.";
+            ? "Student {$record->status}. Time in recorded at {$this->displayTime($record->time_in)}."
+            : "Student checked out. Time out recorded at {$this->displayTime($record->time_out)}.";
 
         return response()->json([
             'success' => true,
@@ -94,6 +92,17 @@ class QRScanController extends Controller
         $results = [];
 
         foreach ($data['scans'] as $scan) {
+            if (blank($scan['qr_token'] ?? null) && blank($scan['lrn'] ?? null)) {
+                $results[] = [
+                    'client_id' => $scan['client_id'],
+                    'success' => false,
+                    'reason' => 'invalid_qr',
+                    'message' => 'Invalid QR code. Student not found.',
+                ];
+
+                continue;
+            }
+
             try {
                 $result = (new ProcessQrScan)->handle(
                     $scan['qr_token'] ?? null,
@@ -114,8 +123,8 @@ class QRScanController extends Controller
                     'duplicate' => $result['duplicate'] ?? false,
                     'action' => $result['action'],
                     'message' => $result['action'] === 'time_in'
-                        ? "Student {$record->status}. Time in recorded at {$record->time_in}."
-                        : "Student checked out. Time out recorded at {$record->time_out}.",
+                        ? "Student {$record->status}. Time in recorded at {$this->displayTime($record->time_in)}."
+                        : "Student checked out. Time out recorded at {$this->displayTime($record->time_out)}.",
                 ];
             } catch (QrScanDeniedException $e) {
                 $results[] = [
@@ -136,8 +145,11 @@ class QRScanController extends Controller
      */
     public function destroy(Request $request, AttendanceRecord $attendanceRecord)
     {
-        $isToday = $attendanceRecord->date === Carbon::now()->toDateString();
-        $isScan  = $attendanceRecord->source === 'scan';
+        // `date` is cast to Carbon, so compare date strings rather than the
+        // object itself; strict comparison would always fail and 403 every
+        // delete/re-take attempt.
+        $isToday = $attendanceRecord->date?->toDateString() === Carbon::now()->toDateString();
+        $isScan = $attendanceRecord->source === 'scan';
 
         if (! $isToday || ! $isScan) {
             return response()->json([
@@ -204,6 +216,19 @@ class QRScanController extends Controller
                 'source' => $record->source,
             ])
             ->toArray();
+    }
+
+    private function displayTime(?string $time): string
+    {
+        if (blank($time)) {
+            return '—';
+        }
+
+        try {
+            return Carbon::parse($time)->format('g:i A');
+        } catch (\Throwable) {
+            return $time;
+        }
     }
 
     private function deniedResponse(QrScanDeniedException $e)

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 
 const roleNames = {
@@ -75,13 +75,22 @@ const ICONS = {
 
 function formatTime12(time) {
     if (!time) return '—';
-    const [h, m] = String(time).split(':');
-    const hour = parseInt(h, 10);
+    const match = String(time).match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return String(time);
+
+    let hour = parseInt(match[1], 10);
+    const minute = match[2];
+    const meridiem = /(AM|PM)/i.exec(String(time))?.[1]?.toUpperCase();
+
+    if (meridiem) {
+        return `${String(hour % 12 || 12).padStart(2, '0')}:${minute} ${meridiem}`;
+    }
+
     const ampm = hour >= 12 ? 'PM' : 'AM';
-    if (hour === 0) return `12:${m} AM`;
-    if (hour === 12) return `12:${m} PM`;
-    if (hour > 12) return `${String(hour - 12).padStart(2, '0')}:${m} PM`;
-    return `${String(hour).padStart(2, '0')}:${m} AM`;
+    if (hour === 0) return `12:${minute} AM`;
+    if (hour === 12) return `12:${minute} PM`;
+    if (hour > 12) hour -= 12;
+    return `${String(hour).padStart(2, '0')}:${minute} ${ampm}`;
 }
 
 function StatCard({ title, value, color = 'blue', icon }) {
@@ -141,17 +150,20 @@ export default function Dashboard({
     const isStaff = ['super_admin', 'admin', 'teacher'].includes(user.role);
     const isGuard = user.role === 'security_guard';
 
-    // Show the generated password once for Google sign-in users.
+    // Show the generated password once for Google sign-in users. The password
+    // arrives as a one-request flash prop, not on the Inertia router.
+    const { flash } = usePage().props;
+    const generatedPassword = flash?.generated_password;
+
     useEffect(() => {
-        if (Object.prototype.hasOwnProperty.call(router.props, 'generated_password')) {
-            const pw = router.props.generated_password;
-            if (pw && window.confirm) {
-                window.confirm(
-                    `Your account was created with a generated password.\n\nEmail: ${router.props.email}\nPassword: ${pw}\n\nPlease change it after logging in.`,
-                );
-            }
+        if (!generatedPassword) {
+            return;
         }
-    }, []);
+
+        window.alert(
+            `Your account was created with a generated password.\n\nEmail: ${user.email}\nPassword: ${generatedPassword}\n\nPlease change it after logging in.`,
+        );
+    }, [generatedPassword, user.email]);
 
     useEffect(() => {
         if (!isStaff && !isGuard) return;

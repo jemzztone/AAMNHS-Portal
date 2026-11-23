@@ -87,8 +87,8 @@ async function notify(title, body) {
     if (registration) {
         await registration.showNotification(title, {
             body,
-            icon: '/images/AAMNHS_LOGO.png',
-            badge: '/images/AAMNHS_LOGO.png',
+            icon: '/images/icon-192.png',
+            badge: '/images/icon-192.png',
             tag: 'aamnhs-sync',
         });
     }

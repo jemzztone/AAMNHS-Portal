@@ -30,6 +30,11 @@ services:
         value: stderr
       - key: LOG_LEVEL
         value: error
+      # No Node SSR process runs in this container. Leaving SSR enabled makes
+      # every request try (and fail) to reach 127.0.0.1:13714 before falling
+      # back to client-side rendering.
+      - key: INERTIA_SSR_ENABLED
+        value: "false"
       # Render routes traffic to the port named by PORT.
       - key: PORT
         value: "8080"

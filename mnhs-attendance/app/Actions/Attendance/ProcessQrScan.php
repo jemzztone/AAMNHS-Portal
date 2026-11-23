@@ -36,6 +36,12 @@ class ProcessQrScan
         $this->clientReference = $clientReference;
         $this->scannedAt = $scannedAt ? Carbon::parse($scannedAt) : null;
 
+        // Neither identifier means the lookup below would silently match the
+        // first student in the table, so reject it outright.
+        if (blank($qrToken) && blank($lrn)) {
+            throw new QrScanDeniedException('invalid_qr', 'Invalid QR code. Student not found.');
+        }
+
         // A queued scan that already reached the server (for example the guard
         // retried after a flaky connection) must not be processed twice.
         if ($clientReference) {
@@ -193,7 +199,7 @@ class ProcessQrScan
 
     private function processTimeOut(AttendanceRecord $existing, Student $student, ?string $ip, ?string $userAgent, ?string $customTime): array
     {
-        $timeOut = $this->scanTime()->format('h:i:s A');
+        $timeOut = $this->scanTime()->format('H:i:s');
 
         $existing->update([
             'time_out' => $timeOut,
@@ -243,8 +249,8 @@ class ProcessQrScan
         SendWebPush::dispatch($user->id, [
             'title' => $action === 'time_in' ? 'Attendance recorded' : 'Time out recorded',
             'body' => $action === 'time_in'
-                ? "{$student->full_name} timed in at {$record->time_in}."
-                : "{$student->full_name} timed out at {$record->time_out}.",
+                ? "{$student->full_name} timed in at {$this->displayTime($record->time_in)}."
+                : "{$student->full_name} timed out at {$this->displayTime($record->time_out)}.",
             'url' => '/attendance-records/'.$record->id,
             'tag' => 'attendance-'.$record->id,
         ]);
@@ -267,8 +273,8 @@ class ProcessQrScan
 
         $section = $student->section?->name;
         $label = $action === 'time_in'
-            ? "timed in at {$record->time_in}"
-            : "timed out at {$record->time_out}";
+            ? "timed in at {$this->displayTime($record->time_in)}"
+            : "timed out at {$this->displayTime($record->time_out)}";
 
         $payload = [
             'title' => $action === 'time_in' ? 'New arrival at the gate' : 'Departure at the gate',
@@ -294,19 +300,36 @@ class ProcessQrScan
      */
     private function canTimeOutNow(AttendanceRecord $record): bool
     {
-        if ($this->scanTime()->subSeconds(self::AUTO_TIME_OUT_COOLDOWN_SECONDS)->gte($record->time_in)) {
-            return true;
+        // copy() matters: scanTime() may return the shared $scannedAt instance,
+        // and mutating it would shift the recorded timestamp for later scans.
+        return $this->scanTime()->copy()
+            ->subSeconds(self::AUTO_TIME_OUT_COOLDOWN_SECONDS)
+            ->gte($record->time_in);
+    }
+
+    /**
+     * Format a stored time for use in push/email copy (e.g. "7:30 AM").
+     */
+    private function displayTime(?string $time): string
+    {
+        if (blank($time)) {
+            return '—';
         }
 
-        return false;
+        try {
+            return Carbon::parse($time)->format('g:i A');
+        } catch (\Throwable) {
+            return $time;
+        }
     }
 
     private function requiresApprovedAdmissionSlip(Student $student): bool
     {
         $previousSchoolDay = $this->scanTime()->copy()->subDay();
 
-        if ($previousSchoolDay->isWeekend()) {
-            $previousSchoolDay = $this->scanTime()->copy()->subDays(3);
+        // Walk back to the most recent weekday (Monday -> Friday, Sunday -> Friday).
+        while ($previousSchoolDay->isWeekend()) {
+            $previousSchoolDay->subDay();
         }
 
         $wasAbsent = AttendanceRecord::where('student_id', $student->id)

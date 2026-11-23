@@ -1,7 +1,14 @@
 /* AAMNHS attendance PWA service worker */
-const CACHE = 'aamnhs-v1';
+const CACHE = 'aamnhs-v2';
 const OFFLINE_URL = '/offline.html';
-const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/images/AAMNHS_LOGO.png'];
+// Keep the install payload small: the full 2000px logo is ~4 MB, while these
+// icons are the ones the manifest and notifications actually need.
+const PRECACHE = [
+    OFFLINE_URL,
+    '/manifest.webmanifest',
+    '/images/icon-192.png',
+    '/images/icon-512.png',
+];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -22,7 +29,11 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches
             .keys()
-            .then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))
+            .then((keys) =>
+                Promise.all(
+                    keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)),
+                ),
+            )
             .then(() => self.clients.claim()),
     );
 });
@@ -55,8 +66,12 @@ self.addEventListener('fetch', (event) => {
                 (cached) =>
                     cached ||
                     fetch(request).then((response) => {
-                        const copy = response.clone();
-                        caches.open(CACHE).then((cache) => cache.put(request, copy));
+                        // Never cache an error page under an asset URL; a cached
+                        // 404 would break the hashed chunk that replaced it.
+                        if (response.ok) {
+                            const copy = response.clone();
+                            caches.open(CACHE).then((cache) => cache.put(request, copy));
+                        }
 
                         return response;
                     }),
@@ -70,8 +85,10 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    const copy = response.clone();
-                    caches.open(CACHE).then((cache) => cache.put(request, copy));
+                    if (response.ok) {
+                        const copy = response.clone();
+                        caches.open(CACHE).then((cache) => cache.put(request, copy));
+                    }
 
                     return response;
                 })
@@ -103,8 +120,8 @@ self.addEventListener('push', (event) => {
     const title = payload.title || 'AAMNHS Attendance';
     const options = {
         body: payload.body || '',
-        icon: '/images/AAMNHS_LOGO.png',
-        badge: '/images/AAMNHS_LOGO.png',
+        icon: '/images/icon-192.png',
+        badge: '/images/icon-192.png',
         tag: payload.tag || 'aamnhs',
         data: { url: payload.url || '/dashboard' },
     };

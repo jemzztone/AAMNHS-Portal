@@ -57,27 +57,29 @@ class SectionScheduleController extends Controller
             ->with('success', 'Schedule created successfully.');
     }
 
-    public function show(Section $section, SectionSchedule $sectionSchedule)
+    // The route parameter is {schedule}, so the argument must be named
+    // $schedule for Laravel's implicit model binding to resolve it.
+    public function show(Section $section, SectionSchedule $schedule)
     {
         $this->authorize('view', $section);
 
         return Inertia::render('SectionSchedules/Show', [
             'section' => $section,
-            'schedule' => $sectionSchedule,
+            'schedule' => $schedule,
         ]);
     }
 
-    public function edit(Section $section, SectionSchedule $sectionSchedule)
+    public function edit(Section $section, SectionSchedule $schedule)
     {
         $this->authorize('update', $section);
 
         return Inertia::render('SectionSchedules/Edit', [
             'section' => $section,
-            'schedule' => $sectionSchedule,
+            'schedule' => $schedule,
         ]);
     }
 
-    public function update(Request $request, Section $section, SectionSchedule $sectionSchedule)
+    public function update(Request $request, Section $section, SectionSchedule $schedule)
     {
         $this->authorize('update', $section);
 
@@ -90,7 +92,7 @@ class SectionScheduleController extends Controller
 
         $conflict = $section->schedules()
             ->where('day_of_week', $validated['day_of_week'])
-            ->where('id', '!=', $sectionSchedule->id)
+            ->where('id', '!=', $schedule->id)
             ->exists();
 
         if ($conflict) {
@@ -99,17 +101,17 @@ class SectionScheduleController extends Controller
             ]);
         }
 
-        $sectionSchedule->update($validated);
+        $schedule->update($validated);
 
         return redirect()->route('schedules.index', $section)
             ->with('success', 'Schedule updated successfully.');
     }
 
-    public function destroy(Section $section, SectionSchedule $sectionSchedule)
+    public function destroy(Section $section, SectionSchedule $schedule)
     {
         $this->authorize('update', $section);
 
-        $sectionSchedule->delete();
+        $schedule->delete();
 
         return redirect()->route('schedules.index', $section)
             ->with('success', 'Schedule deleted successfully.');

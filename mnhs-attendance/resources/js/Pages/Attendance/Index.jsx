@@ -4,13 +4,22 @@ import { useState } from 'react';
 
 function formatTime12(time) {
     if (!time) return '—';
-    const [h, m] = String(time).split(':');
-    const hour = parseInt(h, 10);
+    const match = String(time).match(/^(\d{1,2}):(\d{2})/);
+    if (!match) return String(time);
+
+    let hour = parseInt(match[1], 10);
+    const minute = match[2];
+    const meridiem = /(AM|PM)/i.exec(String(time))?.[1]?.toUpperCase();
+
+    if (meridiem) {
+        return `${String(hour % 12 || 12).padStart(2, '0')}:${minute} ${meridiem}`;
+    }
+
     const ampm = hour >= 12 ? 'PM' : 'AM';
-    if (hour === 0) return `12:${m} AM`;
-    if (hour === 12) return `12:${m} PM`;
-    if (hour > 12) return `${String(hour - 12).padStart(2, '0')}:${m} PM`;
-    return `${String(hour).padStart(2, '0')}:${m} AM`;
+    if (hour === 0) return `12:${minute} AM`;
+    if (hour === 12) return `12:${minute} PM`;
+    if (hour > 12) hour -= 12;
+    return `${String(hour).padStart(2, '0')}:${minute} ${ampm}`;
 }
 
 function statusBadge(status) {

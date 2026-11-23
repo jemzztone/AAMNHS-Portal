@@ -43,6 +43,8 @@ class HandleInertiaRequests extends Middleware
                 'status' => fn () => $request->session()->get('status'),
                 'reset_password' => fn () => $request->session()->get('reset_password'),
                 'import_result' => fn () => $request->session()->get('import_result'),
+                'generated_password' => fn () => $request->session()->get('generated_password'),
+                'show_password_notification' => fn () => $request->session()->get('show_password_notification'),
             ],
             'features' => [
                 // Check if XLSX import is fully supported (requires both ZipArchive and PhpSpreadsheet)

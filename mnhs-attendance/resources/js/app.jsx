@@ -59,19 +59,15 @@ createInertiaApp({
                 .catch(() => {});
         }
 
-        // PWA: show update banner when new version available.
-        window.addEventListener('pwa-update-available', () => {
-            // Auto-reload after 3 seconds (user can also click the banner)
-            const timeout = setTimeout(() => {
-                window.location.reload();
-            }, 3000);
+        // PWA: pages that care (e.g. the guard scanner) listen for
+        // 'pwa-update-available' and offer an explicit Reload button. Never
+        // reload on our own — that could interrupt a scan in progress.
 
-            window.addEventListener('pwa-reloading', () => {
-                clearTimeout(timeout);
-            });
-        });
-
-        initOfflineSync();
+        // Offline scan replay is only meaningful for guards; calling the
+        // guard-only sync endpoint from an admin page just returns 403s.
+        if (props.initialPage?.props?.auth?.user?.role === 'security_guard') {
+            initOfflineSync();
+        }
     },
     progress: {
         color: '#4B5563',
