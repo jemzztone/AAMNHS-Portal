@@ -187,12 +187,12 @@ class BuildAiContext
     private function getLateStudents(User $user, ?string $startDate, ?string $endDate, ?string $sectionId): array
     {
         $query = Student::query()
-            ->select('students.id', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.section_id', DB::raw("SUM(CASE WHEN attendance_records.status = 'late' THEN 1 ELSE 0 END) as late_count"))
+            ->select('students.id', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.section_id', DB::raw("COALESCE(SUM(CASE WHEN attendance_records.status = 'late' THEN 1 ELSE 0 END), 0) as late_count"))
             ->join('attendance_records', 'students.id', '=', 'attendance_records.student_id')
             ->whereDate('attendance_records.date', '>=', $startDate)
             ->whereDate('attendance_records.date', '<=', $endDate)
+            ->where('attendance_records.status', 'late')
             ->groupBy('students.id', 'students.first_name', 'students.middle_name', 'students.last_name', 'students.section_id')
-            ->having('late_count', '>', 0)
             ->orderByDesc('late_count')
             ->take(20);
 
