@@ -41,7 +41,8 @@ export default function Register({ googleRegistration }) {
                     Create your account
                 </h1>
                 <p className="mt-1.5 text-sm text-slate-500">
-                    Join the attendance monitoring system.
+                    Join the attendance monitoring system. All fields are
+                    required unless marked optional.
                 </p>
             </div>
 
@@ -124,6 +125,9 @@ export default function Register({ googleRegistration }) {
                         name="lrn"
                         value={data.lrn}
                         className="mt-1 block w-full"
+                        inputMode="numeric"
+                        maxLength={12}
+                        placeholder="12-digit LRN"
                         onChange={(e) => setData('lrn', e.target.value)}
                         required
                     />
@@ -178,7 +182,7 @@ export default function Register({ googleRegistration }) {
                 </div>
 
                 <div className="mt-4">
-                    <InputLabel htmlFor="guardian_name" value="Guardian Name (Optional)" />
+                    <InputLabel htmlFor="guardian_name" value="Guardian Name" />
 
                     <TextInput
                         id="guardian_name"
@@ -186,6 +190,7 @@ export default function Register({ googleRegistration }) {
                         value={data.guardian_name}
                         className="mt-1 block w-full"
                         onChange={(e) => setData('guardian_name', e.target.value)}
+                        required
                     />
 
                     <InputError message={errors.guardian_name} className="mt-2" />

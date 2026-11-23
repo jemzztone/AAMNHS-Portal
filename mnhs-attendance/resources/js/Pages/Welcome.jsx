@@ -63,18 +63,18 @@ export default function Welcome({ auth }) {
                 {/* ===== Top nav ===== */}
                 <header className="sticky top-0 z-40 border-b border-white/20 bg-white/80 backdrop-blur">
                     <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-                        <div className="flex items-center gap-3">
-                            <ApplicationLogo className="h-9 w-9 text-navy-800" />
-                            <div className="hidden leading-tight sm:block">
-                                <p className="text-sm font-bold text-navy-950">
+                        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                            <ApplicationLogo className="h-8 w-8 shrink-0 text-navy-800 sm:h-9 sm:w-9" />
+                            <div className="min-w-0 leading-tight">
+                                <p className="truncate text-xs font-bold text-navy-950 sm:text-sm">
                                     Aurelians Portal
                                 </p>
-                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-navy-500">
+                                <p className="hidden truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-navy-500 sm:block">
                                     Attendance Monitoring System
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex shrink-0 items-center gap-2">
                             {auth.user ? (
                                 <Link
                                     href={route('dashboard')}
@@ -86,13 +86,13 @@ export default function Welcome({ auth }) {
                                 <>
                                     <Link
                                         href={route('login')}
-                                        className="btn-outline hidden sm:inline-flex"
+                                        className="btn-outline !px-3 !text-xs sm:!px-5 sm:!text-sm"
                                     >
                                         Log in
                                     </Link>
                                     <Link
                                         href={route('register')}
-                                        className="btn-primary"
+                                        className="btn-primary !px-3 !text-xs sm:!px-5 sm:!text-sm"
                                     >
                                         Register
                                     </Link>
@@ -119,23 +119,32 @@ export default function Welcome({ auth }) {
 
                     <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-24 lg:px-8">
                         <div className="mx-auto max-w-3xl text-center">
-                            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-navy-100 backdrop-blur">
+                            <span className="animate-fade-up inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-navy-100 backdrop-blur">
                                 <span className="badge-dot bg-navy-300" />
                                 Republic of the Philippines · DepEd Oriental Mindoro Division
                             </span>
-                            <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+                            <h1
+                                className="animate-fade-up mt-6 text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl"
+                                style={{ animationDelay: '80ms' }}
+                            >
                                 Student attendance,
                                 <span className="block text-navy-200">
                                     reimagined.
                                 </span>
                             </h1>
-                            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-navy-100/80 sm:text-lg">
+                            <p
+                                className="animate-fade-up mx-auto mt-6 max-w-2xl text-base leading-relaxed text-navy-100/80 sm:text-lg"
+                                style={{ animationDelay: '160ms' }}
+                            >
                                 A digital platform that monitors student
                                 attendance, enforces the admission slip gate
                                 policy, notifies guardians in real time, and
                                 provides analytics for school personnel.
                             </p>
-                            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                            <div
+                                className="animate-fade-up mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+                                style={{ animationDelay: '240ms' }}
+                            >
                                 {auth.user ? (
                                     <Link href={route('dashboard')} className="btn-primary !bg-white !px-7 !py-3 !text-base !text-navy-900 hover:!bg-navy-100">
                                         Go to Dashboard
@@ -157,7 +166,10 @@ export default function Welcome({ auth }) {
                                     </>
                                 )}
                             </div>
-                            <div className="mt-12 grid grid-cols-1 gap-4 text-left sm:grid-cols-3">
+                            <div
+                                className="animate-fade-up mt-12 grid grid-cols-1 gap-4 text-left sm:grid-cols-3"
+                                style={{ animationDelay: '320ms' }}
+                            >
                                 {[
                                     ['2,000+', 'Students tracked daily'],
                                     ['< 1s', 'Gate scan to record'],
@@ -183,7 +195,7 @@ export default function Welcome({ auth }) {
                 {/* ===== Features ===== */}
                 <section className="bg-slate-50 py-16 sm:py-20">
                     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="mx-auto max-w-2xl text-center">
+                        <div className="animate-fade-up mx-auto max-w-2xl text-center">
                             <p className="page-eyebrow">Why AAMNHS Attendance</p>
                             <h2 className="mt-2 text-3xl font-bold tracking-tight text-navy-950">
                                 Everything the gate needs,
@@ -194,10 +206,11 @@ export default function Welcome({ auth }) {
                             </h2>
                         </div>
                         <div className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                            {features.map((feature) => (
+                            {features.map((feature, index) => (
                                 <div
                                     key={feature.title}
-                                    className="card card-pad group transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
+                                    className="animate-fade-up card card-pad group transition duration-200 hover:-translate-y-0.5 hover:shadow-lift"
+                                    style={{ animationDelay: `${index * 80}ms` }}
                                 >
                                     <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy-50 text-navy-700 ring-1 ring-inset ring-navy-700/10 transition duration-200 group-hover:bg-navy-800 group-hover:text-white">
                                         <svg
@@ -226,7 +239,7 @@ export default function Welcome({ auth }) {
                 {/* ===== CTA ===== */}
                 <section className="bg-white py-16 sm:py-20">
                     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-                        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-950 via-navy-900 to-navy-700 p-8 text-center text-white sm:p-12">
+                        <div className="animate-fade-up relative overflow-hidden rounded-3xl bg-gradient-to-br from-navy-950 via-navy-900 to-navy-700 p-8 text-center text-white sm:p-12">
                             <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-navy-400/20 blur-3xl" />
                             <h2 className="relative text-2xl font-bold tracking-tight sm:text-3xl">
                                 Ready to simplify attendance?

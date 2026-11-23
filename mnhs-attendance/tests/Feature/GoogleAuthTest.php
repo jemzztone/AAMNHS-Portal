@@ -185,6 +185,7 @@ class GoogleAuthTest extends TestCase
             'lrn' => '987654321012',
             'first_name' => 'New',
             'last_name' => 'Student',
+            'guardian_name' => 'Parent Student',
         ]);
 
         $response->assertRedirect(route('dashboard', absolute: false));
@@ -214,6 +215,7 @@ class GoogleAuthTest extends TestCase
             'lrn' => '111222333444',
             'first_name' => 'Google',
             'last_name' => 'User',
+            'guardian_name' => 'Parent User',
         ]);
 
         $response->assertRedirect(route('dashboard', absolute: false));
