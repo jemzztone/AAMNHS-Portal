@@ -261,8 +261,8 @@ export default function Index({ teachers, sections, filters }) {
                                         Add New Teacher
                                     </h3>
                                     <p className="mt-0.5 text-sm text-slate-500">
-                                        Create a teacher account. Password change
-                                        is required on first login.
+                                        Create a teacher account, then assign
+                                        sections from this page.
                                     </p>
                                 </div>
                                 <button
