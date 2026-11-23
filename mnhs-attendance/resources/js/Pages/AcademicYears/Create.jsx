@@ -11,6 +11,16 @@ export default function Create() {
 
     const submit = (e) => {
         e.preventDefault();
+
+        // Read the DOM values at submit time so a date picked just before
+        // clicking the button is never left behind by React state batching.
+        const form = new FormData(e.currentTarget);
+        setData({
+            name: String(form.get('name') ?? ''),
+            start_date: String(form.get('start_date') ?? ''),
+            end_date: String(form.get('end_date') ?? ''),
+            is_current: form.get('is_current') === 'on',
+        });
         post(route('academic-years.store'));
     };
 
@@ -32,13 +42,14 @@ export default function Create() {
 
             <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="card card-pad">
-                    <form onSubmit={submit} className="space-y-4">
+                    <form onSubmit={submit} className="space-y-4" noValidate>
                         <div>
                             <label className="input-label" htmlFor="name">
                                 Name
                             </label>
                             <input
                                 id="name"
+                                name="name"
                                 type="text"
                                 value={data.name}
                                 onChange={(e) => setData('name', e.target.value)}
@@ -56,6 +67,7 @@ export default function Create() {
                                 </label>
                                 <input
                                     id="start_date"
+                                    name="start_date"
                                     type="date"
                                     value={data.start_date}
                                     onChange={(e) => setData('start_date', e.target.value)}
@@ -72,6 +84,7 @@ export default function Create() {
                                 </label>
                                 <input
                                     id="end_date"
+                                    name="end_date"
                                     type="date"
                                     value={data.end_date}
                                     onChange={(e) => setData('end_date', e.target.value)}
@@ -87,6 +100,7 @@ export default function Create() {
                         <label className="flex items-center gap-2.5">
                             <input
                                 type="checkbox"
+                                name="is_current"
                                 checked={data.is_current}
                                 onChange={(e) => setData('is_current', e.target.checked)}
                                 className="h-4 w-4 rounded border-slate-300 text-navy-700 focus:ring-navy-500"

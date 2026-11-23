@@ -5,6 +5,30 @@ import { useState } from 'react';
 
 const emptyForm = { name: '', start_date: '', end_date: '', is_current: false };
 
+function dateInputValue(value) {
+    if (!value) return '';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+
+    // The API serializes date casts in UTC; show the Manila calendar date.
+    return date.toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+}
+
+function displayDate(value) {
+    if (!value) return '—';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleDateString('en-PH', {
+        timeZone: 'Asia/Manila',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+    });
+}
+
 function YearForm({ initial, submitLabel, onCancel, onSubmit, processing, errors, title }) {
     const [data, setData] = useState(initial);
 
@@ -99,7 +123,7 @@ function YearForm({ initial, submitLabel, onCancel, onSubmit, processing, errors
 export default function Index({ academicYears }) {
     const [showForm, setShowForm] = useState(false);
     const [editing, setEditing] = useState(null);
-    const { post, put, processing, errors, clearErrors } = useForm();
+    const { post, put, setData, processing, errors, clearErrors } = useForm(emptyForm);
 
     const closeForm = () => {
         setShowForm(false);
@@ -107,17 +131,19 @@ export default function Index({ academicYears }) {
         clearErrors();
     };
 
-    const handleStore = (data) => {
+    const handleStore = (formData) => {
+        // setData updates useForm's data ref immediately; passing `data` as a
+        // visit option would be ignored and submit an empty payload.
+        setData(formData);
         post(route('academic-years.store'), {
-            data,
             preserveScroll: true,
             onSuccess: closeForm,
         });
     };
 
-    const handleUpdate = (data) => {
+    const handleUpdate = (formData) => {
+        setData(formData);
         put(route('academic-years.update', editing.id), {
-            data,
             preserveScroll: true,
             onSuccess: closeForm,
         });
@@ -157,11 +183,14 @@ export default function Index({ academicYears }) {
                     <div className="mb-6">
                         {editing ? (
                             <YearForm
+                                key={editing.id}
                                 title={`Edit ${editing.name}`}
                                 initial={{
                                     name: editing.name,
-                                    start_date: editing.start_date,
-                                    end_date: editing.end_date,
+                                    start_date: dateInputValue(
+                                        editing.start_date,
+                                    ),
+                                    end_date: dateInputValue(editing.end_date),
                                     is_current: editing.is_current,
                                 }}
                                 submitLabel="Save Changes"
@@ -201,7 +230,8 @@ export default function Index({ academicYears }) {
                                     <tr key={year.id}>
                                         <td className="td font-semibold text-slate-900">{year.name}</td>
                                         <td className="td text-slate-600">
-                                            {year.start_date} → {year.end_date}
+                                            {displayDate(year.start_date)} →{' '}
+                                            {displayDate(year.end_date)}
                                         </td>
                                         <td className="td text-slate-600">{year.sections_count ?? 0}</td>
                                         <td className="td">

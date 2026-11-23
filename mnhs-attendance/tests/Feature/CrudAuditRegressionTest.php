@@ -359,6 +359,27 @@ class CrudAuditRegressionTest extends TestCase
         $this->assertNotSoftDeleted('sections', ['id' => $section->id]);
     }
 
+    public function test_admin_can_create_an_academic_year_with_start_and_end_dates(): void
+    {
+        $admin = $this->makeUser('admin');
+
+        $this->actingAs($admin)
+            ->post(route('academic-years.store'), [
+                'name' => '2027-2028',
+                'start_date' => '2027-06-01',
+                'end_date' => '2028-03-31',
+                'is_current' => true,
+            ])
+            ->assertRedirect(route('academic-years.index'))
+            ->assertSessionHasNoErrors();
+
+        $year = AcademicYear::where('name', '2027-2028')->firstOrFail();
+
+        $this->assertSame('2027-06-01', $year->start_date->toDateString());
+        $this->assertSame('2028-03-31', $year->end_date->toDateString());
+        $this->assertTrue($year->is_current);
+    }
+
     public function test_academic_year_and_grade_level_with_sections_cannot_be_deleted(): void
     {
         $admin = $this->makeUser('admin');

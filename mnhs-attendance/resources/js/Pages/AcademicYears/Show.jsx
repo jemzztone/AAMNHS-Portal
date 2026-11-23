@@ -1,6 +1,20 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
 
+function displayDate(value) {
+    if (!value) return '—';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    return date.toLocaleDateString('en-PH', {
+        timeZone: 'Asia/Manila',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+    });
+}
+
 export default function Show({ academicYear }) {
     return (
         <AuthenticatedLayout
@@ -47,13 +61,17 @@ export default function Show({ academicYear }) {
                                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                                     Start Date
                                 </p>
-                                <p className="mt-1 text-sm font-medium text-slate-900">{academicYear.start_date}</p>
+                                <p className="mt-1 text-sm font-medium text-slate-900">
+                                    {displayDate(academicYear.start_date)}
+                                </p>
                             </div>
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                                     End Date
                                 </p>
-                                <p className="mt-1 text-sm font-medium text-slate-900">{academicYear.end_date}</p>
+                                <p className="mt-1 text-sm font-medium text-slate-900">
+                                    {displayDate(academicYear.end_date)}
+                                </p>
                             </div>
                         </div>
                     </div>
