@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import QrScanner from '@/Components/QrScanner';
-import { countQueuedScans, enqueueScan } from '@/offline/db';
+import { countQueuedScans, enqueueScan, getQueuedScans, removeQueuedScans } from '@/offline/db';
 import { flushScanQueue } from '@/offline/sync';
 import { Head, router } from '@inertiajs/react';
 import { useMemo, useState, useEffect, useRef } from 'react';
@@ -76,6 +76,21 @@ function formatDate(date) {
     });
 }
 
+function formatDateTime(value) {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+
+    return date.toLocaleString('en-PH', {
+        timeZone: 'Asia/Manila',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+    });
+}
+
 export default function Scan({ schedule: initialSchedule, recentAttendance: initialRecent }) {
     const [qrToken, setQrToken] = useState('');
     const [result, setResult] = useState(null);
@@ -87,6 +102,9 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
     const [scanMode, setScanMode] = useState('auto');
     const [now, setNow] = useState(new Date());
     const [cameraRunning, setCameraRunning] = useState(false);
+    const [showQueue, setShowQueue] = useState(false);
+    const [queuedScans, setQueuedScans] = useState([]);
+    const [queueLoading, setQueueLoading] = useState(false);
     const scannerRef = useRef(null);
 
     /**
@@ -249,6 +267,31 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
      * Save a scan locally when the server cannot be reached. It is replayed by
      * the background sync once the connection is back.
      */
+    const openQueue = async () => {
+        setShowQueue(true);
+        setQueueLoading(true);
+
+        try {
+            const rows = await getQueuedScans();
+            rows.sort((a, b) => new Date(a.queued_at) - new Date(b.queued_at));
+            setQueuedScans(rows);
+        } catch {
+            setQueuedScans([]);
+        } finally {
+            setQueueLoading(false);
+        }
+    };
+
+    const removeQueuedScan = async (clientId) => {
+        if (!window.confirm('Remove this queued scan? It will never be recorded.')) {
+            return;
+        }
+
+        await removeQueuedScans([clientId]);
+        await openQueue();
+        setPendingSync(await countQueuedScans().catch(() => 0));
+    };
+
     const queueOfflineScan = async (payload) => {
         const clientId =
             typeof crypto !== 'undefined' && crypto.randomUUID
@@ -468,6 +511,13 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                             className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                         >
                             {syncing ? 'Syncing…' : 'Sync now'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={openQueue}
+                            className="rounded-lg border border-amber-400 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800"
+                        >
+                            View scans
                         </button>
                     </div>
                 )}
@@ -1105,6 +1155,127 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                         </svg>
                         <span className="text-sm font-bold text-white">Scan QR</span>
                     </button>
+                </div>
+            )}
+
+            {/* Offline queue is available without navigating away, so the guard
+                can still monitor saved scans while the connection is down. */}
+            {showQueue && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div
+                        className="fixed inset-0 bg-black/50"
+                        onClick={() => setShowQueue(false)}
+                    />
+                    <div className="relative flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900">
+                                    Saved offline scans
+                                </h3>
+                                <p className="mt-0.5 text-sm text-slate-500">
+                                    {queuedScans.length} scan
+                                    {queuedScans.length === 1 ? '' : 's'} stored
+                                    on this device. They upload automatically
+                                    when the connection returns.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowQueue(false)}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                                aria-label="Close saved scans"
+                            >
+                                <svg
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth="1.8"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6">
+                            {queueLoading ? (
+                                <p className="py-8 text-center text-sm text-slate-400">
+                                    Loading saved scans…
+                                </p>
+                            ) : queuedScans.length === 0 ? (
+                                <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
+                                    <p className="text-sm font-semibold text-slate-600">
+                                        No saved scans
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-400">
+                                        Everything recorded on this device has
+                                        been uploaded.
+                                    </p>
+                                </div>
+                            ) : (
+                                <ul className="divide-y divide-slate-100">
+                                    {queuedScans.map((scan) => (
+                                        <li
+                                            key={scan.client_id}
+                                            className="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="font-mono text-sm font-semibold text-slate-900">
+                                                    {scan.lrn
+                                                        ? `LRN ${scan.lrn}`
+                                                        : `QR ${String(scan.qr_token || '').slice(0, 12)}…`}
+                                                </p>
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    Mode{' '}
+                                                    {String(
+                                                        scan.mode || 'auto',
+                                                    ).replace('_', ' ')}{' '}
+                                                    · Scanned{' '}
+                                                    {formatDateTime(
+                                                        scan.scanned_at,
+                                                    )}{' '}
+                                                    · Saved{' '}
+                                                    {formatDateTime(
+                                                        scan.queued_at,
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    removeQueuedScan(
+                                                        scan.client_id,
+                                                    )
+                                                }
+                                                className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-semibold text-red-700"
+                                            >
+                                                Remove
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:px-6">
+                            <span className="text-xs text-slate-500">
+                                {isOnline
+                                    ? 'Online — use Sync now to upload these scans.'
+                                    : 'Offline — scans stay safe on this device.'}
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setShowQueue(false)}
+                                className="btn-outline"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </AuthenticatedLayout>

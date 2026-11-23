@@ -1,5 +1,5 @@
 /* AAMNHS attendance PWA service worker */
-const CACHE = 'aamnhs-v2';
+const CACHE = 'aamnhs-v3';
 const OFFLINE_URL = '/offline.html';
 // Keep the install payload small: the full 2000px logo is ~4 MB, while these
 // icons are the ones the manifest and notifications actually need.

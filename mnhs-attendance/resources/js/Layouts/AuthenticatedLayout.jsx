@@ -325,7 +325,23 @@ function SidebarContent({ navItems, role, user, onNavigate }) {
                                     <Link
                                         key={item.href}
                                         href={route(item.href)}
-                                        onClick={onNavigate}
+                                        onClick={(event) => {
+                                            // The offline queue must still open when
+                                            // Inertia's XHR cannot reach the server.
+                                            if (
+                                                item.href ===
+                                                    'guard.offline-scans' &&
+                                                !navigator.onLine
+                                            ) {
+                                                event.preventDefault();
+                                                window.location.assign(
+                                                    route(item.href),
+                                                );
+                                                return;
+                                            }
+
+                                            onNavigate?.();
+                                        }}
                                         className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition duration-150 truncate ${
                                             active
                                                 ? 'bg-white/10 text-white'
@@ -508,6 +524,18 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <Link
                                     key={item.href}
                                     href={route(item.href)}
+                                    onClick={(event) => {
+                                        if (
+                                            item.href ===
+                                                'guard.offline-scans' &&
+                                            !navigator.onLine
+                                        ) {
+                                            event.preventDefault();
+                                            window.location.assign(
+                                                route(item.href),
+                                            );
+                                        }
+                                    }}
                                     className={`flex flex-col items-center justify-center gap-1 rounded-lg px-3 py-2 transition duration-150 focus:outline-none focus:ring-2 focus:ring-navy-500 min-w-[64px] ${active ? 'text-navy-800' : 'text-slate-400 hover:text-navy-600'}`}
                                     aria-current={active ? 'page' : undefined}
                                 >
