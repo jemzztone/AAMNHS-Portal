@@ -9,6 +9,8 @@ use Illuminate\Validation\ValidationException;
 
 class QueryAssistant
 {
+    private ?string $modelUsed = null;
+
     public function handle(
         User $user,
         string $question,
@@ -70,24 +72,44 @@ class QueryAssistant
 
     private function callGemini(string $apiKey, string $prompt): string
     {
-        $model = config('ai.gemini.model');
+        // Google periodically retires models for new API keys. Try the
+        // configured model first, then current fallbacks when it is missing or
+        // temporarily overloaded, instead of failing every AI request.
+        $models = array_values(array_unique(array_filter([
+            config('ai.gemini.model'),
+            'gemini-3.5-flash-lite',
+            'gemini-3.8-flash',
+        ])));
 
-        $response = Http::withOptions(['timeout' => config('ai.timeout_seconds')])
-            ->withQueryParameters(['key' => $apiKey])
-            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
-                'contents' => [
-                    [
-                        'role' => 'user',
-                        'parts' => [['text' => $prompt]],
+        $response = null;
+
+        foreach ($models as $model) {
+            $response = Http::withOptions(['timeout' => config('ai.timeout_seconds')])
+                ->withQueryParameters(['key' => $apiKey])
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+                    'contents' => [
+                        [
+                            'role' => 'user',
+                            'parts' => [['text' => $prompt]],
+                        ],
                     ],
-                ],
-                'generationConfig' => [
-                    'maxOutputTokens' => config('ai.max_tokens'),
-                    'temperature' => 0.3,
-                ],
-            ]);
+                    'generationConfig' => [
+                        'maxOutputTokens' => config('ai.max_tokens'),
+                        'temperature' => 0.3,
+                    ],
+                ]);
 
-        if ($response->failed()) {
+            if ($response->successful()) {
+                $this->modelUsed = $model;
+                break;
+            }
+
+            if (! in_array($response->status(), [404, 503], true)) {
+                break;
+            }
+        }
+
+        if (! $response?->successful()) {
             throw ValidationException::withMessages([
                 'question' => 'The AI provider could not answer right now. Please try again later.',
             ]);
@@ -181,7 +203,7 @@ class QueryAssistant
     private function getModel(string $provider): string
     {
         return match ($provider) {
-            'gemini' => config('ai.gemini.model'),
+            'gemini' => $this->modelUsed ?? config('ai.gemini.model'),
             'openrouter' => config('ai.openrouter.model'),
             default => 'unknown',
         };

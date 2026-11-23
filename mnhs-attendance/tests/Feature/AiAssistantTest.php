@@ -89,6 +89,33 @@ class AiAssistantTest extends TestCase
             ->assertJsonPath('answer', 'Gemini answered this.');
     }
 
+    public function test_ai_retries_with_a_current_gemini_model_when_configured_model_is_retired(): void
+    {
+        config([
+            'ai.provider' => 'gemini',
+            'ai.gemini.api_key' => 'test-key',
+            'ai.gemini.model' => 'gemini-2.5-flash',
+        ]);
+
+        Http::fakeSequence()
+            ->push(['error' => ['status' => 'NOT_FOUND']], 404)
+            ->push([
+                'candidates' => [
+                    ['content' => ['parts' => [['text' => 'Current model answered.']]]],
+                ],
+            ], 200);
+
+        $admin = $this->makeUser('admin');
+
+        $this->actingAs($admin)
+            ->postJson(route('ai.query'), ['question' => 'How many students are enrolled?'])
+            ->assertOk()
+            ->assertJsonPath('answer', 'Current model answered.');
+
+        Http::assertSentCount(2);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'gemini-3.5-flash-lite'));
+    }
+
     public function test_ai_endpoint_answers_question_and_logs_usage(): void
     {
         config(['ai.provider' => 'openrouter', 'ai.openrouter.api_key' => 'test-key']);
