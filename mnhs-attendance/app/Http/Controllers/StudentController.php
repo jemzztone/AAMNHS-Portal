@@ -146,6 +146,10 @@ class StudentController extends Controller
     {
         $this->authorize('update', $student);
 
+        // The form needs the section's grade level to preselect the grade
+        // filter; without it, changing the grade level clears the section.
+        $student->loadMissing('section.gradeLevel');
+
         $user = request()->user();
         $isTeacher = $user->role === 'teacher';
 

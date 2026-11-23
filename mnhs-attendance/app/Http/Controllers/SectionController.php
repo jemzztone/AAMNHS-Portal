@@ -23,6 +23,11 @@ class SectionController extends Controller
 
         $query = Section::with(['gradeLevel', 'teachers'])
             ->withCount('students')
+            ->orderBy(
+                GradeLevel::select('level_number')
+                    ->whereColumn('grade_levels.id', 'sections.grade_level_id'),
+            )
+            ->orderBy('sections.name')
             ->when($request->search, fn ($q, $search) => $q->where('name', 'like', "%{$search}%"));
 
         if ($request->user()->role === 'teacher') {

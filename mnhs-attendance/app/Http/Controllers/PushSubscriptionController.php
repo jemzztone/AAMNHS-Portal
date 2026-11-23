@@ -40,6 +40,39 @@ class PushSubscriptionController extends Controller
         return response()->json(['subscribed' => true]);
     }
 
+    public function test(Request $request, WebPushService $webPush): JsonResponse
+    {
+        if (! $webPush->isConfigured()) {
+            return response()->json([
+                'message' => 'Push notifications are not configured on the server yet.',
+            ], 422);
+        }
+
+        if (! $request->user()->pushSubscriptions()->exists()) {
+            return response()->json([
+                'message' => 'This account has no subscribed device yet. Enable notifications first.',
+            ], 422);
+        }
+
+        $delivered = $webPush->sendToUser($request->user(), [
+            'title' => 'AAMNHS test notification',
+            'body' => 'Push notifications are working on this device.',
+            'url' => '/profile',
+            'tag' => 'aamnhs-test',
+        ]);
+
+        if ($delivered === 0) {
+            return response()->json([
+                'message' => 'The test could not be delivered. Disable and re-enable notifications on this device.',
+            ], 422);
+        }
+
+        return response()->json([
+            'delivered' => $delivered,
+            'message' => "Test notification sent to {$delivered} device(s).",
+        ]);
+    }
+
     public function destroy(Request $request): JsonResponse
     {
         $data = $request->validate([

@@ -64,6 +64,9 @@ Route::middleware(['auth', 'verified', 'active', 'force-password-change'])->grou
     Route::get('/push/public-key', [PushSubscriptionController::class, 'publicKey'])->name('push.public-key');
     Route::post('/push/subscribe', [PushSubscriptionController::class, 'store'])->name('push.subscribe');
     Route::delete('/push/unsubscribe', [PushSubscriptionController::class, 'destroy'])->name('push.unsubscribe');
+    Route::post('/push/test', [PushSubscriptionController::class, 'test'])
+        ->middleware('throttle:5,1')
+        ->name('push.test');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

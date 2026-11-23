@@ -249,6 +249,40 @@ class CrudAuditRegressionTest extends TestCase
         $this->assertNull($student->section_id);
     }
 
+    public function test_sections_are_ordered_by_grade_level_then_name(): void
+    {
+        $admin = $this->makeUser('admin');
+        $academicYear = AcademicYear::firstOrCreate(
+            ['name' => '2026-2027'],
+            [
+                'start_date' => '2026-06-01',
+                'end_date' => '2027-03-31',
+                'is_current' => true,
+            ],
+        );
+        $grade7 = GradeLevel::firstOrCreate(['level_number' => 7], ['name' => 'Grade 7']);
+        $grade8 = GradeLevel::firstOrCreate(['level_number' => 8], ['name' => 'Grade 8']);
+
+        Section::create([
+            'name' => 'Zulu',
+            'grade_level_id' => $grade8->id,
+            'academic_year_id' => $academicYear->id,
+        ]);
+        Section::create([
+            'name' => 'Alpha',
+            'grade_level_id' => $grade7->id,
+            'academic_year_id' => $academicYear->id,
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('sections.index'))
+            ->assertInertia(fn ($page) => $page
+                ->where('sections.data.0.name', 'Alpha')
+                ->where('sections.data.0.grade_level.level_number', 7)
+                ->where('sections.data.1.name', 'Zulu')
+                ->where('sections.data.1.grade_level.level_number', 8));
+    }
+
     public function test_schedule_cannot_be_accessed_through_another_section(): void
     {
         $admin = $this->makeUser('admin');

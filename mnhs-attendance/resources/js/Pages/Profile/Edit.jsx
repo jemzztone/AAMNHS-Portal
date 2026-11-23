@@ -1,4 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import PushSettings from '@/Components/PushSettings';
 import { Head } from '@inertiajs/react';
 import DeleteUserForm from './Partials/DeleteUserForm';
 import UpdatePasswordForm from './Partials/UpdatePasswordForm';
@@ -23,6 +24,8 @@ export default function Edit({ mustVerifyEmail, status }) {
                         status={status}
                     />
                 </div>
+
+                <PushSettings />
 
                 <div className="card card-pad">
                     <UpdatePasswordForm />

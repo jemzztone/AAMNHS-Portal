@@ -134,4 +134,22 @@ class OfflineSyncAndPushTest extends TestCase
 
         $this->assertSame(1, PushSubscription::where('user_id', $user->id)->count());
     }
+
+    public function test_push_test_requires_a_subscribed_device(): void
+    {
+        config([
+            'services.webpush.public_key' => 'test-public-key',
+            'services.webpush.private_key' => 'test-private-key',
+        ]);
+
+        $user = $this->makeUser('student');
+
+        $this->actingAs($user)
+            ->postJson(route('push.test'))
+            ->assertUnprocessable()
+            ->assertJsonPath(
+                'message',
+                'This account has no subscribed device yet. Enable notifications first.',
+            );
+    }
 }

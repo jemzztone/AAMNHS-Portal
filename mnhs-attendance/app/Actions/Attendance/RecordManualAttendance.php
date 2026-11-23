@@ -3,9 +3,11 @@
 namespace App\Actions\Attendance;
 
 use App\Actions\Audit\LogAuditEvent;
+use App\Jobs\SendWebPush;
 use App\Models\AttendanceRecord;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 
 class RecordManualAttendance
 {
@@ -74,6 +76,8 @@ class RecordManualAttendance
                 userAgent: $userAgent,
             );
 
+            $this->notifyStudentPush($student, $existing, true);
+
             return $existing;
         }
 
@@ -102,6 +106,32 @@ class RecordManualAttendance
             userAgent: $userAgent,
         );
 
+        $this->notifyStudentPush($student, $record, false);
+
         return $record;
+    }
+
+    /**
+     * Manual entries previously skipped push, so a student whose attendance was
+     * recorded by an admin or teacher never received an alert.
+     */
+    private function notifyStudentPush(Student $student, AttendanceRecord $record, bool $updated): void
+    {
+        $user = $student->user;
+
+        if (! $user) {
+            return;
+        }
+
+        $time = $record->time_in
+            ? Carbon::parse($record->time_in)->format('g:i A')
+            : null;
+
+        SendWebPush::dispatch($user->id, [
+            'title' => $updated ? 'Attendance updated' : 'Attendance recorded',
+            'body' => trim("{$student->full_name} was marked {$record->status}".($time ? " at {$time}" : '').'.'),
+            'url' => '/attendance-records/'.$record->id,
+            'tag' => 'attendance-'.$record->id,
+        ]);
     }
 }

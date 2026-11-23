@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import PhotoUpload from '@/Components/PhotoUpload';
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useEffect, useRef } from 'react';
 
 const FIELDS = [
     { key: 'first_name', label: 'First Name', required: true },
@@ -22,6 +23,18 @@ export default function Edit({ student, sections, gradeLevels, isTeacher = false
         photo: null,
         is_active: student.is_active,
     });
+
+    const errorKeys = Object.keys(errors);
+    const errorSummaryRef = useRef(null);
+
+    useEffect(() => {
+        if (errorKeys.length > 0) {
+            errorSummaryRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center',
+            });
+        }
+    }, [errors]);
 
     const isSectionLocked = isTeacher;
     const lockedSectionName = isTeacher && student.section ? student.section.name : null;
@@ -67,6 +80,29 @@ export default function Edit({ student, sections, gradeLevels, isTeacher = false
                         </p>
                     </div>
                     <form onSubmit={submit} className="card-pad space-y-6" noValidate>
+                        {errorKeys.length > 0 && (
+                            <div
+                                ref={errorSummaryRef}
+                                role="alert"
+                                className="rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+                            >
+                                <p className="text-sm font-semibold text-red-800">
+                                    The student was not saved. Please check
+                                    these fields:
+                                </p>
+                                <ul className="mt-2 space-y-1 text-sm text-red-700">
+                                    {errorKeys.map((field) => (
+                                        <li key={field}>
+                                            <span className="font-semibold capitalize">
+                                                {field.replaceAll('_', ' ')}
+                                            </span>
+                                            : {errors[field]}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                             {FIELDS.map((field) => (
                                 <div key={field.key}>

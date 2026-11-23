@@ -2,11 +2,21 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import PushNotifications from '@/Components/PushNotifications';
 import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function FlashBanner() {
     const { flash } = usePage().props;
     const message = flash?.success || flash?.error;
+    const bannerRef = useRef(null);
+
+    useEffect(() => {
+        if (message) {
+            bannerRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest',
+            });
+        }
+    }, [message]);
 
     if (!message) {
         return null;
@@ -16,6 +26,7 @@ function FlashBanner() {
 
     return (
         <div
+            ref={bannerRef}
             className={`mx-auto mt-6 max-w-7xl px-4 sm:px-6 lg:px-8`}
         >
             <div
