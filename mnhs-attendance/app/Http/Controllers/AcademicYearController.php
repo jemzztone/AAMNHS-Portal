@@ -98,6 +98,14 @@ class AcademicYearController extends Controller
     {
         $this->authorize('delete', $academicYear);
 
+        // sections.academic_year_id cascades on delete; deleting a year that
+        // still owns sections would silently erase schedules and attendance.
+        if ($academicYear->sections()->exists()) {
+            $message = 'Move or delete this year\'s sections before deleting the academic year.';
+
+            return back()->withErrors(['academic_year' => $message])->with('error', $message);
+        }
+
         $academicYear->delete();
 
         return redirect()->route('academic-years.index')

@@ -62,6 +62,7 @@ class SectionScheduleController extends Controller
     public function show(Section $section, SectionSchedule $schedule)
     {
         $this->authorize('view', $section);
+        $this->ensureScheduleBelongsToSection($section, $schedule);
 
         return Inertia::render('SectionSchedules/Show', [
             'section' => $section,
@@ -72,6 +73,7 @@ class SectionScheduleController extends Controller
     public function edit(Section $section, SectionSchedule $schedule)
     {
         $this->authorize('update', $section);
+        $this->ensureScheduleBelongsToSection($section, $schedule);
 
         return Inertia::render('SectionSchedules/Edit', [
             'section' => $section,
@@ -82,6 +84,7 @@ class SectionScheduleController extends Controller
     public function update(Request $request, Section $section, SectionSchedule $schedule)
     {
         $this->authorize('update', $section);
+        $this->ensureScheduleBelongsToSection($section, $schedule);
 
         $validated = $request->validate([
             'day_of_week' => 'required|string|in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday',
@@ -110,10 +113,20 @@ class SectionScheduleController extends Controller
     public function destroy(Section $section, SectionSchedule $schedule)
     {
         $this->authorize('update', $section);
+        $this->ensureScheduleBelongsToSection($section, $schedule);
 
         $schedule->delete();
 
         return redirect()->route('schedules.index', $section)
             ->with('success', 'Schedule deleted successfully.');
+    }
+
+    /**
+     * Nested routes bind {schedule} independently of {section}; without this
+     * check a teacher assigned to section A could edit section B's schedule.
+     */
+    private function ensureScheduleBelongsToSection(Section $section, SectionSchedule $schedule): void
+    {
+        abort_unless((string) $schedule->section_id === (string) $section->id, 404);
     }
 }

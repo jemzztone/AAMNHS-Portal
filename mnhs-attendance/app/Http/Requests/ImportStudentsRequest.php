@@ -19,8 +19,8 @@ class ImportStudentsRequest extends FormRequest
     {
         $user = $this->user();
 
-        // Teachers and Admins can import XLSX, others only CSV
-        $isAdminOrTeacher = in_array($user->role, ['admin', 'teacher']);
+        // Teachers, Admins, and Super Admins can import XLSX; others only CSV
+        $isAdminOrTeacher = in_array($user->role, ['super_admin', 'admin', 'teacher']);
 
         // Only accept XLSX if ZipArchive is available on the server
         $xlsxSupported = class_exists('ZipArchive');
@@ -44,7 +44,7 @@ class ImportStudentsRequest extends FormRequest
     public function messages(): array
     {
         $user = $this->user();
-        $isAdminOrTeacher = in_array($user->role, ['admin', 'teacher']);
+        $isAdminOrTeacher = in_array($user->role, ['super_admin', 'admin', 'teacher']);
         $xlsxSupported = class_exists('ZipArchive');
 
         $mimeMessage = 'The file must be a valid CSV or TXT file.';

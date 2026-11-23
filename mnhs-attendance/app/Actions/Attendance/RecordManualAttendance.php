@@ -19,9 +19,19 @@ class RecordManualAttendance
             abort(403, 'You can only record attendance for students in your assigned sections.');
         }
 
-        $existing = AttendanceRecord::where('student_id', $student->id)
+        // Include soft-deleted rows: a guard may have removed today's scan, but
+        // the unique (student_id, date) constraint still reserves the day.
+        $existing = AttendanceRecord::withTrashed()
+            ->where('student_id', $student->id)
             ->whereDate('date', $data['date'])
             ->first();
+
+        $restored = false;
+
+        if ($existing?->trashed()) {
+            $existing->restore();
+            $restored = true;
+        }
 
         if ($existing) {
             $previous = [
@@ -36,8 +46,17 @@ class RecordManualAttendance
                 'recorded_by' => $actor->id,
             ];
 
-            if (array_key_exists('time_out', $data)) {
-                $updateData['time_out'] = $data['time_out'];
+            if ($data['status'] === 'absent') {
+                $updateData['time_in'] = null;
+                $updateData['time_out'] = null;
+            } else {
+                if ($restored || blank($existing->time_in)) {
+                    $updateData['time_in'] = now()->format('H:i:s');
+                }
+
+                if (array_key_exists('time_out', $data)) {
+                    $updateData['time_out'] = $data['time_out'];
+                }
             }
 
             $existing->update($updateData);
@@ -64,7 +83,10 @@ class RecordManualAttendance
             'status' => $data['status'],
             'source' => 'manual',
             'recorded_by' => $actor->id,
-            'time_in' => now()->format('h:i:s A'),
+            // The column is a SQL time type. A 12-hour string ("04:05:00 PM")
+            // is rejected by PostgreSQL, so always store 24-hour time.
+            'time_in' => $data['status'] === 'absent' ? null : now()->format('H:i:s'),
+            'time_out' => $data['status'] === 'absent' ? null : ($data['time_out'] ?? null),
         ]);
 
         (new LogAuditEvent)->handle(

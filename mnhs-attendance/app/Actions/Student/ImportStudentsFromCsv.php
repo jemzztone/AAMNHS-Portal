@@ -60,7 +60,7 @@ class ImportStudentsFromCsv
             ];
         }
 
-        $headers = array_map('trim', array_map('strtolower', $rows[0]));
+        $headers = array_map(fn ($header) => strtolower(trim((string) $header)), $rows[0]);
 
         // Remove BOM from first header if present
         if (str_starts_with($headers[0], "\xEF\xBB\xBF")) {
@@ -90,7 +90,25 @@ class ImportStudentsFromCsv
                 continue;
             }
 
+            // Rows with trailing commas or missing columns must not blow up
+            // array_combine (a ValueError on PHP 8) after a partial import.
+            $row = array_values((array) $row);
+            $row = array_map(fn ($value) => is_string($value) ? trim($value) : $value, $row);
+
+            if (count($row) < count($headers)) {
+                $row = array_pad($row, count($headers), null);
+            } elseif (count($row) > count($headers)) {
+                $row = array_slice($row, 0, count($headers));
+            }
+
             $data = array_combine($headers, $row);
+
+            if ($data === false) {
+                $failed++;
+                $errors[] = "Row {$rowNumber}: The row could not be read.";
+
+                continue;
+            }
 
             if (! isset($data['first_name'], $data['last_name'], $data['lrn'])) {
                 $failed++;
@@ -99,16 +117,23 @@ class ImportStudentsFromCsv
                 continue;
             }
 
-            $data['first_name'] = trim($data['first_name'] ?? '');
-            $data['last_name'] = trim($data['last_name'] ?? '');
-            $data['lrn'] = trim($data['lrn'] ?? '');
-            $data['middle_name'] = trim($data['middle_name'] ?? '');
-            $data['guardian_name'] = trim($data['guardian_name'] ?? '');
-            $data['guardian_email'] = trim($data['guardian_email'] ?? '');
+            $data['first_name'] = trim((string) ($data['first_name'] ?? ''));
+            $data['last_name'] = trim((string) ($data['last_name'] ?? ''));
+            $data['lrn'] = trim((string) ($data['lrn'] ?? ''));
+            $data['middle_name'] = trim((string) ($data['middle_name'] ?? ''));
+            $data['guardian_name'] = trim((string) ($data['guardian_name'] ?? ''));
+            $data['guardian_email'] = trim((string) ($data['guardian_email'] ?? ''));
 
             if (empty($data['first_name']) || empty($data['last_name']) || empty($data['lrn'])) {
                 $failed++;
                 $errors[] = "Row {$rowNumber}: First name, last name, and LRN are required.";
+
+                continue;
+            }
+
+            if ($data['guardian_email'] !== '' && ! filter_var($data['guardian_email'], FILTER_VALIDATE_EMAIL)) {
+                $failed++;
+                $errors[] = "Row {$rowNumber}: Guardian email is not a valid email address.";
 
                 continue;
             }
@@ -123,14 +148,28 @@ class ImportStudentsFromCsv
                 continue;
             }
 
-            if (Student::where('lrn', $data['lrn'])->exists()) {
+            if (Student::withTrashed()->where('lrn', $data['lrn'])->exists()) {
                 $failed++;
-                $errors[] = "Row {$rowNumber}: LRN '{$data['lrn']}' already exists.";
+                $errors[] = "Row {$rowNumber}: LRN '{$data['lrn']}' already exists (including deleted students).";
 
                 continue;
             }
 
-            $effectiveSectionId = $section?->id ?? ($data['section_id'] ?? null);
+            $effectiveSection = $section;
+            $rowSectionId = trim((string) ($data['section_id'] ?? ''));
+
+            if (! $effectiveSection && $rowSectionId !== '') {
+                $effectiveSection = Section::find($rowSectionId);
+
+                if (! $effectiveSection) {
+                    $failed++;
+                    $errors[] = "Row {$rowNumber}: Section '{$rowSectionId}' was not found.";
+
+                    continue;
+                }
+            }
+
+            $effectiveSectionId = $effectiveSection?->id;
 
             try {
                 $studentData = [
@@ -149,7 +188,7 @@ class ImportStudentsFromCsv
                 $success++;
 
                 Log::info("Successfully imported: {$data['first_name']} {$data['last_name']}");
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $failed++;
                 $errors[] = "Row {$rowNumber}: {$e->getMessage()}";
                 Log::error("Import failed row {$rowNumber}: {$e->getMessage()}");

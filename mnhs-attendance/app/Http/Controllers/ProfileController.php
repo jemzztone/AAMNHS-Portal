@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\User;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -51,8 +52,18 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
+        if ($user->isSuperAdmin()
+            && User::where('role', 'super_admin')->where('is_active', true)->count() <= 1) {
+            return back()->withErrors([
+                'password' => 'The last active super administrator cannot delete their account.',
+            ]);
+        }
+
         Auth::logout();
 
+        // Remove the linked student profile so it stops appearing at the gate
+        // and in class lists.
+        $user->student?->delete();
         $user->delete();
 
         $request->session()->invalidate();

@@ -28,7 +28,7 @@ class AttendanceController extends Controller
             $query->whereHas('student', fn ($q) => $q->whereIn('section_id', $sectionIds));
         }
 
-        $records = $query->latest('time_in')->paginate($request->get('per_page', 5));
+        $records = $query->latest('time_in')->paginate(min(max((int) $request->get('per_page', 5), 1), 100));
 
         return Inertia::render('Attendance/Index', [
             'records' => $records,
@@ -55,14 +55,20 @@ class AttendanceController extends Controller
     {
         $this->authorize('viewAny', AttendanceRecord::class);
 
-        $startDate = $request->get('start_date', now()->startOfMonth()->toDateString());
-        $endDate = $request->get('end_date', now()->toDateString());
+        $validated = $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'section_id' => 'nullable|exists:sections,id',
+        ]);
+
+        $startDate = $validated['start_date'] ?? now()->startOfMonth()->toDateString();
+        $endDate = $validated['end_date'] ?? now()->toDateString();
 
         $csv = (new ExportAttendanceCsv)->handle(
             $request->user(),
             $startDate,
             $endDate,
-            $request->get('section_id'),
+            $validated['section_id'] ?? null,
         );
 
         return response($csv, 200, [

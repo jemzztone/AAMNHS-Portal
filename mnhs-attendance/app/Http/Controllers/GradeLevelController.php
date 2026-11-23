@@ -82,6 +82,14 @@ class GradeLevelController extends Controller
     {
         $this->authorize('delete', $gradeLevel);
 
+        // sections.grade_level_id cascades; block rather than deleting the
+        // grade level's sections (and their attendance) by accident.
+        if ($gradeLevel->sections()->exists()) {
+            $message = 'Move or delete this grade level\'s sections before deleting it.';
+
+            return back()->withErrors(['grade_level' => $message])->with('error', $message);
+        }
+
         $gradeLevel->delete();
 
         return redirect()->route('grade-levels.index')

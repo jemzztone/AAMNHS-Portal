@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Models\Student;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class UpdateStudentRequest extends FormRequest
 {
@@ -23,16 +22,36 @@ class UpdateStudentRequest extends FormRequest
         $user = $this->user();
         $isTeacher = $user->role === 'teacher';
 
-        // Teachers cannot change section assignment
+        // Teachers cannot move a student to another section. A student without
+        // a section stays without one (the old `in:` rule rejected null).
         $sectionRule = $isTeacher
-            ? 'required|exists:sections,id|in:'.$student->section_id
-            : 'required|exists:sections,id';
+            ? [
+                'nullable',
+                'exists:sections,id',
+                function (string $attribute, mixed $value, \Closure $fail) use ($student) {
+                    if ((string) $value !== (string) $student->section_id) {
+                        $fail('You cannot change the section assignment.');
+                    }
+                },
+            ]
+            : 'nullable|exists:sections,id';
 
         return [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
-            'lrn' => ['required', 'string', 'digits:12', 'integer', Rule::unique('students', 'lrn')->ignore($student->id)],
+            'lrn' => [
+                'required',
+                'string',
+                'digits:12',
+                'integer',
+                // Include soft-deleted rows: they still occupy the unique index.
+                function (string $attribute, mixed $value, \Closure $fail) use ($student) {
+                    if (Student::withTrashed()->where('lrn', $value)->where('id', '!=', $student->id)->exists()) {
+                        $fail('Another student already uses this LRN.');
+                    }
+                },
+            ],
             'section_id' => $sectionRule,
             'guardian_name' => 'nullable|string|max:255',
             'guardian_email' => 'nullable|email',

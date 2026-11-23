@@ -30,7 +30,7 @@ class SectionController extends Controller
             $query->whereIn('sections.id', $assignedIds);
         }
 
-        $sections = $query->paginate($request->get('per_page', 5));
+        $sections = $query->paginate(min(max((int) $request->get('per_page', 5), 1), 100));
 
         return Inertia::render('Sections/Index', [
             'sections' => $sections,
@@ -88,6 +88,14 @@ class SectionController extends Controller
     {
         $this->authorize('delete', $section);
 
+        // Soft-deleting the section would leave its students pointing at a
+        // hidden section and hide them from their teachers.
+        if ($section->students()->exists()) {
+            $message = 'Move or remove this section\'s students before deleting it.';
+
+            return back()->withErrors(['section' => $message])->with('error', $message);
+        }
+
         $section->delete();
 
         return redirect()->route('sections.index')->with('success', 'Section deleted successfully.');
@@ -130,6 +138,9 @@ class SectionController extends Controller
     public function removeTeacher(Section $section, TeacherSectionAssignment $assignment)
     {
         $this->authorize('assignTeacher', $section);
+
+        // Nested binding does not guarantee the assignment belongs to this section.
+        abort_unless((string) $assignment->section_id === (string) $section->id, 404);
 
         $teacher = User::findOrFail($assignment->user_id);
 

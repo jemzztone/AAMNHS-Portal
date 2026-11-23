@@ -96,6 +96,14 @@ class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user)
     {
+        // Demoting the only active super admin would lock everyone out of
+        // user management, restores, and role changes.
+        if ($this->isLastActiveSuperAdmin($user) && $request->role !== 'super_admin') {
+            return back()->withErrors([
+                'role' => 'The last active super administrator must keep that role.',
+            ]);
+        }
+
         $oldValues = $user->only(['name', 'email', 'role', 'phone']);
 
         $user->update([
@@ -122,7 +130,12 @@ class UserController extends Controller
     {
         $this->authorize('delete', $user);
 
+        $student = $user->student;
+
         $user->delete();
+
+        // Keep the student list and gate in sync with the removed login.
+        $student?->delete();
 
         (new LogAuditEvent)->handle(
             event: 'user.deleted',
@@ -141,6 +154,7 @@ class UserController extends Controller
         $this->authorize('restore', $user);
 
         $user->restore();
+        $user->student()->withTrashed()->first()?->restore();
 
         (new LogAuditEvent)->handle(
             event: 'user.restored',
@@ -213,5 +227,11 @@ class UserController extends Controller
             'user_name' => $user->name,
             'new_password' => $newPassword,
         ]);
+    }
+
+    private function isLastActiveSuperAdmin(User $user): bool
+    {
+        return $user->role === 'super_admin'
+            && User::where('role', 'super_admin')->where('is_active', true)->count() <= 1;
     }
 }

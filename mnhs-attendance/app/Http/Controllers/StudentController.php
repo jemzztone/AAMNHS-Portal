@@ -180,6 +180,9 @@ class StudentController extends Controller
     {
         $this->authorize('delete', $student);
 
+        // Soft-deleting the profile alone leaves a working login behind.
+        $student->user?->update(['is_active' => false]);
+
         $student->delete();
 
         return redirect()->route('students.index')->with('success', 'Student deleted successfully.');

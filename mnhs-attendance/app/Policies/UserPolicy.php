@@ -18,7 +18,9 @@ class UserPolicy
         }
 
         if ($user->role === 'admin') {
-            return in_array($model->role, ['teacher', 'student']);
+            // The index lists admins and guards too; the detail page must not
+            // 403 for rows the admin can already see (and edit).
+            return $model->role !== 'super_admin';
         }
 
         return false;

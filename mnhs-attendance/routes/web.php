@@ -13,8 +13,8 @@ use App\Http\Controllers\GradeLevelController;
 use App\Http\Controllers\GuardianNotificationController;
 use App\Http\Controllers\GuardScheduleController;
 use App\Http\Controllers\NotificationSettingController;
-use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\QRScanController;
 use App\Http\Controllers\SectionController;
 use App\Http\Controllers\SectionScheduleController;
@@ -41,13 +41,13 @@ Route::get('/health', function () {
 
     try {
         DB::connection()->select('select 1');
-    } catch (\Throwable) {
+    } catch (Throwable) {
         $healthy = false;
     }
 
     try {
         Cache::store()->put('health-check', 'ok', 10);
-    } catch (\Throwable) {
+    } catch (Throwable) {
         $healthy = false;
     }
 
@@ -139,7 +139,11 @@ Route::middleware(['auth', 'verified', 'active', 'force-password-change'])->grou
         Route::post('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
         Route::post('users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
         Route::post('users/{user}/force-password-change', [UserController::class, 'forcePasswordChange'])->name('users.force-password-change');
-        Route::post('users/{user}/restore', [UserController::class, 'restore'])->name('users.restore');
+        // The default bind excludes trashed users, so the restore action could
+        // never find the account it was supposed to restore.
+        Route::post('users/{user}/restore', [UserController::class, 'restore'])
+            ->withTrashed()
+            ->name('users.restore');
 
         // Teacher Management
         Route::get('/teachers', [TeacherController::class, 'index'])->name('teachers.index');
