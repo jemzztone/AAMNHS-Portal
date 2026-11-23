@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 const ALLOWED_ROLES = ['super_admin', 'admin'];
 
@@ -10,30 +11,111 @@ function canImport({ user }) {
 
 function Dropdown({ children, trigger }) {
     const [open, setOpen] = useState(false);
-    const ref = useRef(null);
+    const [position, setPosition] = useState(null);
+    const buttonRef = useRef(null);
+    const menuRef = useRef(null);
+
+    const placeMenu = () => {
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
+        const width = 192;
+        const gap = 6;
+        const menuHeight = menuRef.current?.offsetHeight || 150;
+        const spaceBelow = window.innerHeight - rect.bottom - gap;
+        const top =
+            spaceBelow >= menuHeight
+                ? rect.bottom + gap
+                : Math.max(8, rect.top - menuHeight - gap);
+        const left = Math.min(
+            Math.max(8, rect.right - width),
+            window.innerWidth - width - 8,
+        );
+
+        setPosition({ top, left });
+    };
+
+    const openMenu = () => {
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (rect) {
+            const width = 192;
+            const gap = 6;
+            const spaceBelow = window.innerHeight - rect.bottom - gap;
+            const top =
+                spaceBelow >= 150
+                    ? rect.bottom + gap
+                    : Math.max(8, rect.top - 150 - gap);
+            setPosition({
+                top,
+                left: Math.min(
+                    Math.max(8, rect.right - width),
+                    window.innerWidth - width - 8,
+                ),
+            });
+        }
+        setOpen(true);
+    };
+
+    useLayoutEffect(() => {
+        if (open) placeMenu();
+    }, [open]);
 
     useEffect(() => {
-        const handler = (e) => {
-            if (ref.current && !ref.current.contains(e.target)) {
+        if (!open) return;
+
+        const handlePointerDown = (e) => {
+            if (
+                !menuRef.current?.contains(e.target) &&
+                !buttonRef.current?.contains(e.target)
+            ) {
                 setOpen(false);
             }
         };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, []);
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') setOpen(false);
+        };
+        const closeOnViewportChange = () => setOpen(false);
+
+        document.addEventListener('mousedown', handlePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('resize', closeOnViewportChange);
+        window.addEventListener('scroll', closeOnViewportChange, true);
+
+        return () => {
+            document.removeEventListener('mousedown', handlePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('resize', closeOnViewportChange);
+            window.removeEventListener('scroll', closeOnViewportChange, true);
+        };
+    }, [open]);
 
     return (
-        <div className="relative" ref={ref}>
+        <div className="relative" ref={buttonRef}>
             <button
-                onClick={() => setOpen(!open)}
+                type="button"
+                onClick={() => (open ? setOpen(false) : openMenu())}
+                aria-haspopup="menu"
+                aria-expanded={open}
+                aria-label="Open student actions"
                 className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
             >
                 {trigger}
             </button>
-            {open && (
-                <div className="absolute right-0 z-30 mt-1 w-48 origin-top-right rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+            {open && position && createPortal(
+                <div
+                    ref={menuRef}
+                    role="menu"
+                    style={{
+                        position: 'fixed',
+                        top: position.top,
+                        left: position.left,
+                        width: 192,
+                    }}
+                    className="z-[100] max-h-[min(20rem,calc(100vh-1rem))] overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl"
+                >
                     {typeof children === 'function' ? children(() => setOpen(false)) : children}
-                </div>
+                </div>,
+                document.body,
             )}
         </div>
     );
@@ -46,7 +128,7 @@ function DropdownItem({ href, onClick, className = '', children }) {
         </span>
     );
     return href ? (
-        <Link href={href} className="block">{content}</Link>
+        <Link href={href} onClick={onClick} className="block">{content}</Link>
     ) : (
         <button onClick={onClick} className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-slate-50 ${className}`}>
             {children}

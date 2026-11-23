@@ -71,7 +71,15 @@ class UserController extends Controller
             userAgent: $request->userAgent(),
         );
 
-        return redirect()->route('users.index')->with('success', 'User created successfully.');
+        $redirectRoute = $request->input('redirect_to') === 'teachers'
+            ? 'teachers.index'
+            : 'users.index';
+
+        return redirect()
+            ->route($redirectRoute)
+            ->with('success', $user->role === 'teacher'
+                ? "{$user->name} was added as a teacher."
+                : 'User created successfully.');
     }
 
     public function show(User $user)

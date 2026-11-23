@@ -7,6 +7,7 @@ export default function Index({ teachers, sections, filters }) {
     const [search, setSearch] = useState(filters.search || '');
     const [selectedTeacher, setSelectedTeacher] = useState(null);
     const [showAssignModal, setShowAssignModal] = useState(false);
+    const [showCreateModal, setShowCreateModal] = useState(false);
     const [showRemoveModal, setShowRemoveModal] = useState(false);
     const [removeTarget, setRemoveTarget] = useState(null);
 
@@ -16,6 +17,24 @@ export default function Index({ teachers, sections, filters }) {
     });
 
     const { processing: removeProcessing, delete: destroy } = useForm();
+
+    const {
+        data: createData,
+        setData: setCreateData,
+        post: createTeacher,
+        processing: createProcessing,
+        errors: createErrors,
+        reset: resetCreateForm,
+        clearErrors: clearCreateErrors,
+    } = useForm({
+        name: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+        phone: '',
+        role: 'teacher',
+        redirect_to: 'teachers',
+    });
 
     const handleFilter = () => {
         router.get(route('teachers.index'), { search }, { preserveState: true });
@@ -45,6 +64,22 @@ export default function Index({ teachers, sections, filters }) {
         setShowRemoveModal(true);
     };
 
+    const openCreateModal = () => {
+        clearCreateErrors();
+        setShowCreateModal(true);
+    };
+
+    const handleCreateTeacher = (e) => {
+        e.preventDefault();
+        createTeacher(route('users.store'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                resetCreateForm();
+                setShowCreateModal(false);
+            },
+        });
+    };
+
     const handleRemove = () => {
         if (!removeTarget) return;
         router.post(route('teachers.remove'), {
@@ -62,9 +97,32 @@ export default function Index({ teachers, sections, filters }) {
     return (
         <AuthenticatedLayout
             header={
-                <div>
-                    <p className="page-eyebrow">Administration</p>
-                    <h2 className="surface-title">Teacher Management</h2>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="page-eyebrow">Administration</p>
+                        <h2 className="surface-title">Teacher Management</h2>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={openCreateModal}
+                        className="btn-primary"
+                    >
+                        <svg
+                            className="h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth="2"
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 4.5v15m7.5-7.5h-15"
+                            />
+                        </svg>
+                        Add Teacher
+                    </button>
                 </div>
             }
         >
@@ -187,6 +245,209 @@ export default function Index({ teachers, sections, filters }) {
                     )}
                 </div>
             </div>
+
+            {/* Create Teacher Modal */}
+            {showCreateModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div
+                        className="fixed inset-0 bg-black/50"
+                        onClick={() => setShowCreateModal(false)}
+                    />
+                    <div className="relative max-h-[calc(100vh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                        <div className="border-b border-slate-100 px-5 py-4 sm:px-6 sm:py-5">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900">
+                                        Add New Teacher
+                                    </h3>
+                                    <p className="mt-0.5 text-sm text-slate-500">
+                                        Create a teacher account. Password change
+                                        is required on first login.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                                    aria-label="Close"
+                                >
+                                    <svg
+                                        className="h-5 w-5"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        strokeWidth="1.8"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M6 18L18 6M6 6l12 12"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <form
+                            onSubmit={handleCreateTeacher}
+                            className="space-y-4 px-5 py-5 sm:px-6"
+                        >
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div className="sm:col-span-2">
+                                    <label
+                                        htmlFor="create-name"
+                                        className="input-label"
+                                    >
+                                        Full Name{' '}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        id="create-name"
+                                        type="text"
+                                        value={createData.name}
+                                        onChange={(e) =>
+                                            setCreateData(
+                                                'name',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className="input mt-1.5"
+                                        required
+                                    />
+                                    {createErrors.name && (
+                                        <p className="mt-1 text-xs text-red-600">
+                                            {createErrors.name}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label
+                                        htmlFor="create-email"
+                                        className="input-label"
+                                    >
+                                        Email{' '}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        id="create-email"
+                                        type="email"
+                                        value={createData.email}
+                                        onChange={(e) =>
+                                            setCreateData(
+                                                'email',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className="input mt-1.5"
+                                        required
+                                    />
+                                    {createErrors.email && (
+                                        <p className="mt-1 text-xs text-red-600">
+                                            {createErrors.email}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label
+                                        htmlFor="create-password"
+                                        className="input-label"
+                                    >
+                                        Password{' '}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        id="create-password"
+                                        type="password"
+                                        value={createData.password}
+                                        onChange={(e) =>
+                                            setCreateData(
+                                                'password',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className="input mt-1.5"
+                                        minLength={10}
+                                        required
+                                    />
+                                    {createErrors.password && (
+                                        <p className="mt-1 text-xs text-red-600">
+                                            {createErrors.password}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label
+                                        htmlFor="create-password-confirmation"
+                                        className="input-label"
+                                    >
+                                        Confirm Password{' '}
+                                        <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        id="create-password-confirmation"
+                                        type="password"
+                                        value={createData.password_confirmation}
+                                        onChange={(e) =>
+                                            setCreateData(
+                                                'password_confirmation',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className="input mt-1.5"
+                                        minLength={10}
+                                        required
+                                    />
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <label
+                                        htmlFor="create-phone"
+                                        className="input-label"
+                                    >
+                                        Phone
+                                    </label>
+                                    <input
+                                        id="create-phone"
+                                        type="text"
+                                        value={createData.phone}
+                                        onChange={(e) =>
+                                            setCreateData(
+                                                'phone',
+                                                e.target.value,
+                                            )
+                                        }
+                                        className="input mt-1.5"
+                                        placeholder="Optional"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-100 pt-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="btn-outline"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={createProcessing}
+                                    className="btn-primary"
+                                >
+                                    {createProcessing
+                                        ? 'Creating...'
+                                        : 'Create Teacher'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* Assign Modal */}
             {showAssignModal && (
