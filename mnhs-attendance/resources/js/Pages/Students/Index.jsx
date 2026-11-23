@@ -141,10 +141,10 @@ export default function Index({ students, sections, filters, user }) {
                         <p className="page-eyebrow">Registry</p>
                         <h2 className="surface-title">Students</h2>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center sm:gap-3">
                         <Link
                             href={route('students.bulk-print-qr')}
-                            className="btn-outline"
+                            className="btn-outline justify-center"
                         >
                             <svg
                                 className="h-4 w-4"
@@ -165,7 +165,7 @@ export default function Index({ students, sections, filters, user }) {
                         {canImportStudents && (
                             <Link
                                 href={route('students.import-csv')}
-                                className="btn-outline"
+                                className="btn-outline justify-center"
                             >
                                 <svg
                                     className="h-4 w-4"
@@ -186,7 +186,7 @@ export default function Index({ students, sections, filters, user }) {
                         )}
                         <Link
                             href={route('students.create')}
-                            className="btn-primary"
+                            className="btn-primary col-span-2 justify-center sm:col-span-1"
                         >
                             <svg
                                 className="h-4 w-4"

@@ -1,33 +1,46 @@
-import { useEffect, useRef, useState } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
-export default function QrScanner({ onScan, onError }) {
+const QrScanner = forwardRef(function QrScanner({ onScan, onError, onRunningChange }, ref) {
     const [isRunning, setIsRunning] = useState(false);
     const [hasCamera, setHasCamera] = useState(true);
     const scannerRef = useRef(null);
-    const containerRef = useRef(null);
+    const startingRef = useRef(false);
+
+    useEffect(() => {
+        onRunningChange?.(isRunning);
+    }, [isRunning, onRunningChange]);
 
     useEffect(() => {
         return () => {
             if (scannerRef.current) {
                 scannerRef.current.stop().catch(() => {});
                 scannerRef.current.clear();
+                scannerRef.current = null;
             }
         };
     }, []);
 
     const startScanner = async () => {
-        if (scannerRef.current) return;
+        if (scannerRef.current || startingRef.current) return;
+
+        startingRef.current = true;
+        setHasCamera(true);
 
         try {
             const scanner = new Html5Qrcode('qr-reader');
-            scannerRef.current = scanner;
 
             await scanner.start(
                 { facingMode: 'environment' },
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 250 },
+                    // Keep the target inside the viewfinder on narrow phones.
+                    qrbox: (viewfinderWidth, viewfinderHeight) => {
+                        const edge = Math.min(viewfinderWidth, viewfinderHeight);
+                        const size = Math.max(160, Math.floor(edge * 0.7));
+
+                        return { width: size, height: size };
+                    },
                     aspectRatio: 1.0,
                 },
                 (decodedText) => {
@@ -36,6 +49,7 @@ export default function QrScanner({ onScan, onError }) {
                 () => {},
             );
 
+            scannerRef.current = scanner;
             setIsRunning(true);
         } catch (err) {
             console.error('Camera error:', err);
@@ -43,29 +57,39 @@ export default function QrScanner({ onScan, onError }) {
             if (onError) {
                 onError('Camera not available. Please type the token manually.');
             }
+        } finally {
+            startingRef.current = false;
         }
     };
 
     const stopScanner = async () => {
-        if (scannerRef.current) {
-            try {
-                await scannerRef.current.stop();
-                scannerRef.current.clear();
-                scannerRef.current = null;
-                setIsRunning(false);
-            } catch (err) {
-                console.error('Stop error:', err);
-            }
+        if (!scannerRef.current) return;
+
+        try {
+            await scannerRef.current.stop();
+            scannerRef.current.clear();
+        } catch (err) {
+            console.error('Stop error:', err);
+        } finally {
+            scannerRef.current = null;
+            setIsRunning(false);
         }
     };
 
+    useImperativeHandle(ref, () => ({
+        start: startScanner,
+        stop: stopScanner,
+        isRunning,
+    }));
+
     return (
         <div className="space-y-4">
-            <div id="qr-reader" ref={containerRef} className="overflow-hidden rounded-xl" />
+            <div id="qr-reader" className="overflow-hidden rounded-xl" />
 
             <div className="flex justify-center">
                 {!isRunning ? (
                     <button
+                        type="button"
                         onClick={startScanner}
                         className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-navy-900 shadow-lg transition hover:bg-navy-50 active:bg-navy-100"
                     >
@@ -77,6 +101,7 @@ export default function QrScanner({ onScan, onError }) {
                     </button>
                 ) : (
                     <button
+                        type="button"
                         onClick={stopScanner}
                         className="inline-flex items-center justify-center gap-2 rounded-full bg-red-500/20 px-6 py-3 text-sm font-bold text-white ring-1 ring-inset ring-red-400/30 transition hover:bg-red-500/30"
                     >
@@ -95,4 +120,6 @@ export default function QrScanner({ onScan, onError }) {
             )}
         </div>
     );
-}
+});
+
+export default QrScanner;

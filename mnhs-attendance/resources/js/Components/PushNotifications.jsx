@@ -63,7 +63,9 @@ export default function PushNotifications() {
     };
 
     return (
-        <div className="fixed bottom-4 right-4 z-40 w-72 rounded-xl border border-slate-200 bg-white p-4 shadow-lg">
+        // On phones this renders inline above the page header so it cannot
+        // cover the bottom navigation, scan button, or table actions.
+        <div className="z-40 mx-4 mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-lg lg:fixed lg:bottom-4 lg:right-4 lg:mx-0 lg:mt-0 lg:w-72">
             <p className="text-sm font-semibold text-navy-900">Enable notifications</p>
             <p className="mt-1 text-xs leading-relaxed text-slate-600">
                 Get an instant alert on this device when attendance is recorded.

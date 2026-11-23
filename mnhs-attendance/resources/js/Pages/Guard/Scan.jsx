@@ -3,7 +3,7 @@ import QrScanner from '@/Components/QrScanner';
 import { countQueuedScans, enqueueScan } from '@/offline/db';
 import { flushScanQueue } from '@/offline/sync';
 import { Head, router } from '@inertiajs/react';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 
 const statusBadge = (status) => {
     const map = {
@@ -86,6 +86,8 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
     const [loading, setLoading] = useState(false);
     const [scanMode, setScanMode] = useState('auto');
     const [now, setNow] = useState(new Date());
+    const [cameraRunning, setCameraRunning] = useState(false);
+    const scannerRef = useRef(null);
 
     /**
      * Today's date in YYYY-MM-DD, matching the backend's
@@ -408,14 +410,14 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
     return (
         <AuthenticatedLayout
             header={
-                <div className="flex items-center justify-between">
-                    <div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
                         <p className="page-eyebrow">Security</p>
                         <h2 className="surface-title">Gate QR Scanner</h2>
                     </div>
-                    <div className="text-right">
-                        <p className="text-lg sm:text-2xl font-bold tabular-nums text-slate-900">{clockTime}</p>
-                        <p className="text-xs text-slate-500">{clockDate}</p>
+                    <div className="shrink-0 text-right">
+                        <p className="text-base font-bold tabular-nums text-slate-900 sm:text-2xl">{clockTime}</p>
+                        <p className="max-w-[13rem] text-[11px] text-slate-500 sm:max-w-none sm:text-xs">{clockDate}</p>
                     </div>
                 </div>
             }
@@ -442,7 +444,7 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                 </div>
             )}
 
-            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <div className="mx-auto max-w-7xl px-4 pt-8 pb-40 sm:px-6 lg:px-8 lg:pb-8">
                 {(!isOnline || pendingSync > 0) && (
                     <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
                         <span className="font-semibold">
@@ -609,8 +611,10 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                                 {/* Camera Scanner */}
                                 <div className="mt-6">
                                     <QrScanner
+                                        ref={scannerRef}
                                         onScan={handleCameraScan}
                                         onError={setError}
+                                        onRunningChange={setCameraRunning}
                                     />
                                 </div>
 
@@ -1078,27 +1082,31 @@ export default function Scan({ schedule: initialSchedule, recentAttendance: init
                     </div>
                 </div>
             </div>
-            {/* GCash-style center QR scan button for mobile */}
-            <div className="fixed inset-x-0 bottom-20 z-30 lg:hidden">
-                <button
-                    onClick={() => {
-                        const scanner = document.querySelector('#qr-reader');
-                        if (scanner) {
-                            const buttons = scanner.querySelectorAll('button');
-                            buttons.forEach(btn => {
-                                if (btn.textContent.includes('Start')) {
-                                    btn.click();
-                                }
-                            });
-                        }
-                    }}
-                    className="mx-auto mb-4 block rounded-full bg-navy-800 px-6 py-3 shadow-lg ring-2 ring-navy-700 transition hover:bg-navy-700 active:bg-navy-900"
-                >
-                    <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
-                    </svg>
-                </button>
-            </div>
+            {/* GCash-style center QR scan button for mobile. Hidden while the
+                camera is running so it never covers the Stop Camera control. */}
+            {!cameraRunning && (
+                <div className="fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-30 px-4 lg:hidden">
+                    <button
+                        type="button"
+                        aria-label="Open camera to scan a student QR code"
+                        onClick={() => {
+                            // The scanner's Start button lives outside #qr-reader,
+                            // so drive it through the component ref instead.
+                            setScanMode('auto');
+                            scannerRef.current?.start();
+                            document
+                                .getElementById('qr-reader')
+                                ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }}
+                        className="mx-auto flex items-center gap-2 rounded-full bg-navy-800 px-6 py-3 shadow-lg ring-2 ring-navy-700 transition hover:bg-navy-700 active:bg-navy-900"
+                    >
+                        <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM13.5 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5z" />
+                        </svg>
+                        <span className="text-sm font-bold text-white">Scan QR</span>
+                    </button>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }
