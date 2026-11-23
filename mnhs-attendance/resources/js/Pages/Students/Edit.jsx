@@ -11,7 +11,10 @@ const FIELDS = [
 ];
 
 export default function Edit({ student, sections, gradeLevels, isTeacher = false }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
+        // PHP does not parse multipart PUT bodies. Inertia switches to
+        // FormData when a photo is attached, so spoof PUT through POST.
+        _method: 'put',
         first_name: student.first_name || '',
         last_name: student.last_name || '',
         middle_name: student.middle_name || '',
@@ -45,7 +48,7 @@ export default function Edit({ student, sections, gradeLevels, isTeacher = false
 
     const submit = (e) => {
         e.preventDefault();
-        put(route('students.update', student));
+        post(route('students.update', student));
     };
 
     return (

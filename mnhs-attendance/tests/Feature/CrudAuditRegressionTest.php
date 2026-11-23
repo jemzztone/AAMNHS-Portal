@@ -12,6 +12,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -247,6 +248,34 @@ class CrudAuditRegressionTest extends TestCase
 
         $this->assertSame('Renamed', $student->refresh()->first_name);
         $this->assertNull($student->section_id);
+    }
+
+    public function test_student_update_with_a_photo_uses_method_spoofing(): void
+    {
+        Storage::fake('public');
+
+        $admin = $this->makeUser('admin');
+        $student = $this->makeStudent($this->makeSection());
+
+        $this->actingAs($admin)
+            ->post(route('students.update', $student), [
+                '_method' => 'put',
+                'first_name' => 'Photo',
+                'last_name' => 'Updated',
+                'lrn' => $student->lrn,
+                'section_id' => $student->section_id,
+                'is_active' => true,
+                'photo' => UploadedFile::fake()->image('student.jpg'),
+            ])
+            ->assertRedirect(route('students.show', $student))
+            ->assertSessionHasNoErrors();
+
+        $student->refresh();
+
+        $this->assertSame('Photo', $student->first_name);
+        $this->assertSame('Updated', $student->last_name);
+        $this->assertNotNull($student->photo_path);
+        Storage::disk('public')->assertExists($student->photo_path);
     }
 
     public function test_sections_are_ordered_by_grade_level_then_name(): void
