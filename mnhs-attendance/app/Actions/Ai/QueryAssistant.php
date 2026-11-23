@@ -18,17 +18,20 @@ class QueryAssistant
         ?string $ip,
         ?string $userAgent,
     ): string {
-        $provider = config('ai.provider');
+        $provider = $this->resolveProvider();
+        $apiKey = $this->apiKeyFor($provider);
 
-        $apiKey = match ($provider) {
-            'gemini' => config('ai.gemini.api_key'),
-            'openrouter' => config('ai.openrouter.api_key'),
-            default => null,
-        };
+        if (! in_array($provider, ['gemini', 'openrouter'], true)) {
+            throw ValidationException::withMessages([
+                'question' => "Unsupported AI provider: {$provider}. Set AI_PROVIDER to gemini or openrouter.",
+            ]);
+        }
 
         if (blank($apiKey)) {
+            $envVar = $provider === 'gemini' ? 'GOOGLE_API_KEY' : 'OPENROUTER_API_KEY';
+
             throw ValidationException::withMessages([
-                'question' => "AI assistance is not configured. Ask an administrator to set the appropriate API key environment variable for the {$provider} provider.",
+                'question' => "AI assistance is not configured. Ask an administrator to set {$envVar} in the environment (AI_PROVIDER={$provider}), then redeploy.",
             ]);
         }
 
@@ -54,7 +57,7 @@ class QueryAssistant
                 'question' => $question,
                 'answer' => $answer,
                 'provider' => $provider,
-                'model' => $this->getModel(),
+                'model' => $this->getModel($provider),
                 'period' => "{$startDate} to {$endDate}",
                 'section_id' => $sectionId,
             ],
@@ -143,9 +146,41 @@ class QueryAssistant
         return $answer;
     }
 
-    private function getModel(): string
+    private function resolveProvider(): string
     {
-        return match (config('ai.provider')) {
+        $configured = strtolower(trim((string) config('ai.provider')));
+
+        if (! in_array($configured, ['gemini', 'openrouter'], true)) {
+            return $configured;
+        }
+
+        if (filled($this->apiKeyFor($configured))) {
+            return $configured;
+        }
+
+        // Keep the assistant working when the deployment has only one provider
+        // key configured but AI_PROVIDER still points at the other provider.
+        foreach (['gemini', 'openrouter'] as $fallback) {
+            if ($fallback !== $configured && filled($this->apiKeyFor($fallback))) {
+                return $fallback;
+            }
+        }
+
+        return $configured;
+    }
+
+    private function apiKeyFor(string $provider): ?string
+    {
+        return match ($provider) {
+            'gemini' => config('ai.gemini.api_key'),
+            'openrouter' => config('ai.openrouter.api_key'),
+            default => null,
+        };
+    }
+
+    private function getModel(string $provider): string
+    {
+        return match ($provider) {
             'gemini' => config('ai.gemini.model'),
             'openrouter' => config('ai.openrouter.model'),
             default => 'unknown',

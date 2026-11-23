@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'provider' => env('AI_PROVIDER', 'openrouter'),
+    'provider' => env('AI_PROVIDER', 'gemini'),
 
     'gemini' => [
         'api_key' => env('GOOGLE_API_KEY'),

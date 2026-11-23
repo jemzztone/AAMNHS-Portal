@@ -51,7 +51,11 @@ class AiAssistantTest extends TestCase
 
     public function test_ai_endpoint_returns_friendly_error_when_not_configured(): void
     {
-        config(['ai.provider' => 'openrouter', 'ai.openrouter.api_key' => null]);
+        config([
+            'ai.provider' => 'openrouter',
+            'ai.openrouter.api_key' => null,
+            'ai.gemini.api_key' => null,
+        ]);
 
         $admin = $this->makeUser('admin');
 
@@ -59,6 +63,30 @@ class AiAssistantTest extends TestCase
             ->postJson(route('ai.query'), ['question' => 'Who is late most often?'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('question');
+    }
+
+    public function test_ai_uses_the_configured_provider_when_preferred_provider_has_no_key(): void
+    {
+        config([
+            'ai.provider' => 'openrouter',
+            'ai.openrouter.api_key' => null,
+            'ai.gemini.api_key' => 'test-key',
+        ]);
+
+        Http::fake([
+            'generativelanguage.googleapis.com/*' => Http::response([
+                'candidates' => [
+                    ['content' => ['parts' => [['text' => 'Gemini answered this.']]]],
+                ],
+            ]),
+        ]);
+
+        $admin = $this->makeUser('admin');
+
+        $this->actingAs($admin)
+            ->postJson(route('ai.query'), ['question' => 'How many students are enrolled?'])
+            ->assertOk()
+            ->assertJsonPath('answer', 'Gemini answered this.');
     }
 
     public function test_ai_endpoint_answers_question_and_logs_usage(): void
